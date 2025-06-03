@@ -1,6 +1,8 @@
 streamlit
 dotenv
 langchain-community
+langchain-openai
+langchain-chroma
 pandas
 protobuf==3.20.3
 google-cloud-vision
@@ -8,4 +10,6 @@ langchain
 openai
 chromadb
 setuptools
+
+
 
