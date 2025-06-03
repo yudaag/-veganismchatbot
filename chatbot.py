@@ -31,6 +31,8 @@ def show():
     load_dotenv()
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "teset-459015-9880036b726e.json"
 
+    one_line = json.dumps(data)
+
 
     def get_image_base64(image_path):
         with open(image_path, "rb") as image_file:
