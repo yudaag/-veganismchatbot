@@ -40,6 +40,13 @@ def show():
     # dict로 명시적으로 변환
     creds_info = dict(st.secrets["google_credentials"])
 
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as temp_file:
+        json.dump(creds_info, temp_file)
+        temp_file.flush()  # 꼭 flush 해줘야 내용이 저장됨
+        temp_path = temp_file.name
+        
+    credentials = service_account.Credentials.from_service_account_file(temp_path)
+
 
     def get_image_base64(image_path):
         with open(image_path, "rb") as image_file:
