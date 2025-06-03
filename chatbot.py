@@ -22,14 +22,15 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain.memory import ConversationBufferMemory
 from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassthrough
 
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
 
 def show():
 
     # 환경변수 로드
     load_dotenv()
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "teset-459015-9880036b726e.json"
+    openai_key = st.secrets["OPENAI_API_KEY"]
+
+    google_creds = st.secrets["google_credentials"]
+    client_email = google_creds["client_email"]
 
     def get_image_base64(image_path):
         with open(image_path, "rb") as image_file:
