@@ -6,3 +6,4 @@ google-cloud-vision
 langchain
 openai
 chromadb
+protobuf==3.20.3
