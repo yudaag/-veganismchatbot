@@ -8,6 +8,6 @@ protobuf==3.20.3
 google-cloud-vision
 langchain
 pysqlite3-binary
-
+chromadb==0.4.24
 
 
