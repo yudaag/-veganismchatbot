@@ -39,12 +39,6 @@ def show():
     # secrets에서 credentials 불러오기
     # dict로 명시적으로 변환
     creds_info = dict(st.secrets["google_credentials"])
-    
-    # 임시 파일 생성
-    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as f:
-        json.dump(creds_info, f)
-        f.flush()
-        credentials = service_account.Credentials.from_service_account_file(f.name)
 
 
     def get_image_base64(image_path):
