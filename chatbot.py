@@ -25,16 +25,20 @@ from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassth
 
 def show():
 
-    # 환경변수 로드
-    load_dotenv()
-    openai_key = st.secrets["OPENAI_API_KEY"]
-
+    import streamlit as st
+    from dotenv import load_dotenv
+    import os
     import json
     import tempfile
     from google.oauth2 import service_account
     
+    # 환경변수 로드
+    load_dotenv()
+    openai_key = st.secrets["OPENAI_API_KEY"]
+    
     # secrets에서 credentials 불러오기
-    creds_info = st.secrets["google_credentials"]
+    # dict로 명시적으로 변환
+    creds_info = dict(st.secrets["google_credentials"])
     
     # 임시 파일 생성
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as f:
