@@ -9,6 +9,6 @@ google-cloud-vision
 langchain
 pysqlite3-binary
 chromadb==0.4.24
-numpy==1.26.4
+numpy
 
 
