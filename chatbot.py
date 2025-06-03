@@ -29,8 +29,19 @@ def show():
     load_dotenv()
     openai_key = st.secrets["OPENAI_API_KEY"]
 
-    google_creds = st.secrets["google_credentials"]
-    client_email = google_creds["client_email"]
+    import json
+    import tempfile
+    from google.oauth2 import service_account
+    
+    # secrets에서 credentials 불러오기
+    creds_info = st.secrets["google_credentials"]
+    
+    # 임시 파일 생성
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as f:
+        json.dump(creds_info, f)
+        f.flush()
+        credentials = service_account.Credentials.from_service_account_file(f.name)
+
 
     def get_image_base64(image_path):
         with open(image_path, "rb") as image_file:
