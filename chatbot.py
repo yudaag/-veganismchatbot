@@ -29,10 +29,7 @@ def show():
 
     # 환경변수 로드
     load_dotenv()
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "teset-459015-9880036b726e.json"
-
-    one_line = json.dumps(data)
-
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = st.secrets["GOOGLE_APPLICATION_CREDENTIALS"]
 
     def get_image_base64(image_path):
         with open(image_path, "rb") as image_file:
