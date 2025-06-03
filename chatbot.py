@@ -1,5 +1,7 @@
 # 그냥 환경 영향
-
+import sys
+import pysqlite3
+sys.modules["sqlite3"] = pysqlite3
 import os
 import streamlit as st
 import tempfile
@@ -21,9 +23,6 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.memory import ConversationBufferMemory
 from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassthrough
-import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
 
 
 def show():
