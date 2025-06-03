@@ -101,34 +101,25 @@ def show():
     atexit.register(close_vectorstore)
 
      # OCR 함수 정의
+    # 전역변수로 credentials와 client 생성
+    client = vision.ImageAnnotatorClient(credentials=credentials)
+    
     def detect_text(image_path):
-        # Google Cloud Vision API 클라이언트 생성
-        client = detect_text(tmp_path, credentials)
-
-        
-        # 이미지 파일을 바이너리 모드로 열고 내용 읽기
         with io.open(image_path, 'rb') as image_file:
             content = image_file.read()
-        
-        # 읽은 내용을 Vision API용 이미지 객체로 생성
+    
         image = vision.Image(content=content)
-        
-        # 이미지에서 텍스트 감지 요청
         response = client.text_detection(image=image)
-        
-        # 오류가 발생한 경우 예외 발생
+    
         if response.error.message:
             raise Exception(f"Google Vision API 오류: {response.error.message}")
-        
-        # 감지된 텍스트 정보 리스트 가져오기
+    
         texts = response.text_annotations
-        
-        # 감지된 텍스트가 없으면 빈 문자열 반환
         if not texts:
             return ""
-        
-        # 첫 번째 항목(description은 전체 텍스트 블록)을 반환
+    
         return texts[0].description
+
 
     # 질문 유형 분석 함수
     def analyze_question_type(prompt):
