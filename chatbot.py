@@ -103,7 +103,8 @@ def show():
      # OCR 함수 정의
     def detect_text(image_path):
         # Google Cloud Vision API 클라이언트 생성
-        client = vision.ImageAnnotatorClient()
+        client = detect_text(tmp_path, credentials)
+
         
         # 이미지 파일을 바이너리 모드로 열고 내용 읽기
         with io.open(image_path, 'rb') as image_file:
