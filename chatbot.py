@@ -435,6 +435,7 @@ def show():
                         embedding_function=embedding_function
                     )
 
+
                 # ✅ 기존 OCR 벡터 삭제 및 새로 추가
                 st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
                 doc = Document(
