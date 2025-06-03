@@ -1,4 +1,10 @@
+streamlit
+python-dotenv
+pandas
 google-cloud-vision
-dotenv
+base64  
+difflib  
+langchain
 langchain-community
 openai
+chromadb
