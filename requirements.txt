@@ -1,6 +1,6 @@
-google-cloud-vision
 streamlit
 dotenv
+google-cloud-vision
 langchain-community
 langchain-openai
 langchain-chroma
