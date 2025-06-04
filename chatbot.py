@@ -9,7 +9,6 @@ import io
 import atexit
 import pandas as pd
 import re
-from google.cloud import vision
 from dotenv import load_dotenv
 import base64
 import difflib
@@ -23,6 +22,8 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.memory import ConversationBufferMemory
 from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassthrough
+from google.cloud.vision_v1 import ImageAnnotatorClient, types
+from google.oauth2 import service_account
 
 
 def show():
@@ -102,25 +103,23 @@ def show():
     # 프로그램 종료 시 close_vectorstore 함수가 자동으로 호출되도록 등록
     atexit.register(close_vectorstore)
 
-     # OCR 함수 정의
-    # 전역변수로 credentials와 client 생성
-    client = vision.ImageAnnotatorClient(credentials=credentials)
-    
-    def detect_text(image_path):
-        with io.open(image_path, 'rb') as image_file:
-            content = image_file.read()
-    
-        image = vision.Image(content=content)
-        response = client.text_detection(image=image)
-    
-        if response.error.message:
-            raise Exception(f"Google Vision API 오류: {response.error.message}")
-    
-        texts = response.text_annotations
-        if not texts:
-            return ""
-    
-        return texts[0].description
+    # 전역 변수 설정
+    credentials = service_account.Credentials.from_service_account_file("your-service-account.json")
+    client = ImageAnnotatorClient(credentials=credentials
+
+    def detect_text(image_path: str) -> str:
+    """Google Cloud Vision API로 텍스트 추출"""
+    with io.open(image_path, 'rb') as image_file:
+        content = image_file.read()
+
+    image = types.Image(content=content)
+    response = client.text_detection(image=image)
+
+    if response.error.message:
+        raise RuntimeError(f"Google Vision API 오류: {response.error.message}")
+
+    texts = response.text_annotations
+    return texts[0].description.strip() if texts else ""
 
     # 질문 유형 분석 함수
     def analyze_question_type(prompt):
