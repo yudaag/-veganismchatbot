@@ -41,6 +41,11 @@ def show():
         creds_info = json.loads(st.secrets["google"]["credentials"])
         credentials = service_account.Credentials.from_service_account_info(creds_info)
         client = vision.ImageAnnotatorClient(credentials=credentials)
+
+    if "google" in st.secrets and "credentials" in st.secrets["google"]:
+        creds_info = json.loads(st.secrets["google"]["credentials"])
+        credentials = service_account.Credentials.from_service_account_info(creds_info)
+
     else:
         # 로컬 실행 시 환경변수에서 경로를 불러오는 방식 유지
         credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
