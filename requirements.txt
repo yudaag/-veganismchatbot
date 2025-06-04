@@ -1,7 +1,7 @@
 streamlit
 python-dotenv
 google-cloud-vision==3.5.2
-langchain
+langchain==0.1.14
 chromadb==0.4.24
 pandas
 numpy==1.26.4
