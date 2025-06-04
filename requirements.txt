@@ -9,14 +9,12 @@ langchain
 pysqlite3-binary
 chromadb==0.4.24
 numpy==1.26.4
-# Google Cloud Vision API 및 인증 관련 라이브러리
 google-cloud-vision==3.4.5
 google-auth==2.29.0
 google-auth-oauthlib==1.2.0
 google-api-core==2.18.0
 google-cloud-core==2.4.1
-
-# 기타 일반적인 의존성 (필요 시 추가 가능)
 protobuf==4.25.3
 grpcio==1.64.0
+
 
