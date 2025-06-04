@@ -432,38 +432,56 @@ def show():
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
 
-                # ✅ 벡터스토어가 없으면 초기화
-                if "vectorstore" not in st.session_state:
-                    # 📁 1. Chroma DB 압축 해제
-                    persist_dir = "veganchroma_db11"  # 압축 해제 경로
-                    zip_path = "veganchroma_db11.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
-                
-                    if not os.path.exists(persist_dir):
-                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                            zip_ref.extractall(persist_dir)
-                            print("✅ Chroma DB 압축 해제 완료")
-                
-                    # 🔍 2. Chroma 로드
-                    embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
-                    st.session_state["vectorstore"] = Chroma(
-                        persist_directory=persist_dir,
-                        embedding_function=embedding_function
-                    )
-
-                # ✅ 기존 OCR 벡터 삭제 및 새로 추가
-                st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
-                doc = Document(
-                    page_content=ocr_text,
-                    metadata={"source": "user_ocr", "filename": uploaded_image.name}
+            # 벡터 DB 로드 확인 후 이미 로드된 경우에는 다시 초기화하지 않음
+            if "vectorstore" not in st.session_state:
+                persist_dir = "veganchroma_db11"  # 압축 해제 경로
+                zip_path = "veganchroma_db11.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
+            
+                # 벡터 DB가 존재하지 않으면 초기화 및 로드
+                if not os.path.exists(persist_dir):
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(persist_dir)
+                        print("✅ Chroma DB 압축 해제 완료")
+            
+                embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
+                st.session_state["vectorstore"] = Chroma(
+                    persist_directory=persist_dir,
+                    embedding_function=embedding_function
                 )
-                st.session_state["vectorstore"].add_documents([doc])
-
-                system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
-                st.session_state["memory"].chat_memory.add_user_message(system_message)
-
-            except Exception as e:
-                st.error(f"OCR 처리 중 오류 발생: {e}")
-                st.stop()
+            else:
+                print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
+            
+            # 문서 추가 및 검색
+            if uploaded_image is not None:
+                # 새로 업로드된 이미지의 이름이 이전과 다른 경우 OCR 재실행
+                if "prev_uploaded_filename" not in st.session_state or st.session_state["prev_uploaded_filename"] != uploaded_image.name:
+                    st.session_state["prev_uploaded_filename"] = uploaded_image.name  # 새 이미지 이름 저장
+            
+                    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                        tmp_file.write(uploaded_image.getvalue())
+                        tmp_path = tmp_file.name
+            
+                    try:
+                        ocr_text = detect_text(tmp_path)
+                        st.session_state["ocr_text"] = ocr_text
+                        st.session_state["ocr_done"] = True
+                        st.success("✅ OCR 처리 완료! 추출된 텍스트:")
+                        st.text_area("OCR 텍스트", ocr_text, height=300)
+            
+                        # 기존 OCR 벡터 삭제 및 새로 추가
+                        st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
+                        doc = Document(
+                            page_content=ocr_text,
+                            metadata={"source": "user_ocr", "filename": uploaded_image.name}
+                        )
+                        st.session_state["vectorstore"].add_documents([doc])
+            
+                        system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
+                        st.session_state["memory"].chat_memory.add_user_message(system_message)
+            
+                    except Exception as e:
+                        st.error(f"OCR 처리 중 오류 발생: {e}")
+                        st.stop()
 
     # ✅ 최초 안내 멘트 출력
     if "messages" not in st.session_state:
