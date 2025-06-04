@@ -435,8 +435,8 @@ def show():
                 # ✅ 벡터스토어가 없으면 초기화
                 if "vectorstore" not in st.session_state:
                     # 📁 1. Chroma DB 압축 해제
-                    persist_dir = "veganchroma_db"  # 압축 해제 경로
-                    zip_path = "veganchroma_db.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
+                    persist_dir = "veganchroma_db11"  # 압축 해제 경로
+                    zip_path = "veganchroma_db11.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
                 
                     if not os.path.exists(persist_dir):
                         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
