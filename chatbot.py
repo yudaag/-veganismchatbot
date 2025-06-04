@@ -27,9 +27,27 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 def show():
 
-    # 환경변수 로드
+    import os
+    import streamlit as st
+    import json
+    from google.cloud import vision
+    from google.oauth2 import service_account
+    from dotenv import load_dotenv
+    
+    # 환경변수 로드 (.env 파일 로컬 개발용)
     load_dotenv()
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"D:\veganism\teset-459015-9880036b726e.json"
+    
+    # Streamlit Secrets에서 서비스 계정 정보 가져오기
+    if "google" in st.secrets:
+        google_creds = st.secrets["google"]["credentials"]
+        creds_dict = json.loads(google_creds)
+    
+        credentials = service_account.Credentials.from_service_account_info(creds_dict)
+        client = vision.ImageAnnotatorClient(credentials=credentials)
+    else:
+        # 로컬 실행 시 환경변수에서 경로를 불러오는 방식 유지
+        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        client = vision.ImageAnnotatorClient.from_service_account_file(credentials_path)
 
 
     def get_image_base64(image_path):
