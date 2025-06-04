@@ -1,7 +1,5 @@
 # 그냥 환경 영향
-import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
+
 import os
 import streamlit as st
 import tempfile
@@ -9,12 +7,13 @@ import io
 import atexit
 import pandas as pd
 import re
+from google.cloud import vision
 from dotenv import load_dotenv
 import base64
 import difflib
-from langchain_openai import OpenAIEmbeddings
-from langchain_chroma import Chroma
-from langchain_community.chat_models import ChatOpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.docstore.document import Document
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -22,33 +21,15 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.memory import ConversationBufferMemory
 from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassthrough
-from google.cloud.vision_v1 import ImageAnnotatorClient, types
-from google.oauth2 import service_account
 
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 def show():
 
-    import streamlit as st
-    from dotenv import load_dotenv
-    import os
-    import json
-    import tempfile
-    from google.oauth2 import service_account
-    
     # 환경변수 로드
     load_dotenv()
-    openai_key = st.secrets["OPENAI_API_KEY"]
-    
-    # secrets에서 credentials 불러오기
-    # dict로 명시적으로 변환
-    creds_info = dict(st.secrets["google_credentials"])
-
-    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as temp_file:
-        json.dump(creds_info, temp_file)
-        temp_file.flush()  # 꼭 flush 해줘야 내용이 저장됨
-        temp_path = temp_file.name
-        
-    credentials = service_account.Credentials.from_service_account_file(temp_path)
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"D:\veganism\teset-459015-9880036b726e.json"
 
 
     def get_image_base64(image_path):
@@ -103,23 +84,34 @@ def show():
     # 프로그램 종료 시 close_vectorstore 함수가 자동으로 호출되도록 등록
     atexit.register(close_vectorstore)
 
-    # 전역 변수 설정
-    credentials = service_account.Credentials.from_service_account_file("your-service-account.json")
-    client = ImageAnnotatorClient(credentials=credentials
-
-    def detect_text(image_path: str) -> str:
-    """Google Cloud Vision API로 텍스트 추출"""
-    with io.open(image_path, 'rb') as image_file:
-        content = image_file.read()
-
-    image = types.Image(content=content)
-    response = client.text_detection(image=image)
-
-    if response.error.message:
-        raise RuntimeError(f"Google Vision API 오류: {response.error.message}")
-
-    texts = response.text_annotations
-    return texts[0].description.strip() if texts else ""
+    # OCR 함수 정의
+    def detect_text(image_path):
+        # Google Cloud Vision API 클라이언트 생성
+        client = vision.ImageAnnotatorClient()
+        
+        # 이미지 파일을 바이너리 모드로 열고 내용 읽기
+        with io.open(image_path, 'rb') as image_file:
+            content = image_file.read()
+        
+        # 읽은 내용을 Vision API용 이미지 객체로 생성
+        image = vision.Image(content=content)
+        
+        # 이미지에서 텍스트 감지 요청
+        response = client.text_detection(image=image)
+        
+        # 오류가 발생한 경우 예외 발생
+        if response.error.message:
+            raise Exception(f"Google Vision API 오류: {response.error.message}")
+        
+        # 감지된 텍스트 정보 리스트 가져오기
+        texts = response.text_annotations
+        
+        # 감지된 텍스트가 없으면 빈 문자열 반환
+        if not texts:
+            return ""
+        
+        # 첫 번째 항목(description은 전체 텍스트 블록)을 반환
+        return texts[0].description
 
     # 질문 유형 분석 함수
     def analyze_question_type(prompt):
