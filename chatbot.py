@@ -743,7 +743,12 @@ def show():
         # 문서 관련 정보도 출력
         docs = retriever.get_relevant_documents(prompt)
         if docs:
+            print(f"검색된 문서: {[doc.metadata.get('product_name') for doc in docs]}")  # 검색된 문서들의 이름 출력
+        
             with st.expander("참고 문서"):
                 for doc in docs:
                     source = doc.metadata.get("source", "출처 없음")
-                    st.markdown(f"📄 **{source}**", help=doc.page_content)
+                    st.markdown(f"📄 **{source}**", help=doc.page_content)  # 문서 내용도 함께 표시
+        else:
+            print("검색된 문서가 없습니다.")
+            st.write("❗ 해당 질문에 대한 참고 문서가 없습니다.")
