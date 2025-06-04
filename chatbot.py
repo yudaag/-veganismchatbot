@@ -21,15 +21,17 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.memory import ConversationBufferMemory
 from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassthrough
+import streamlit as st
+from dotenv import load_dotenv
+import os
+import json
+import tempfile
+from google.oauth2 import service_account
+from google.cloud import vision
+import io
+
 
 def show():
-
-    import streamlit as st
-    from dotenv import load_dotenv
-    import os
-    import json
-    import tempfile
-    from google.oauth2 import service_account
     
     # 환경 변수 로드
     load_dotenv()
@@ -96,32 +98,23 @@ def show():
     # 프로그램 종료 시 close_vectorstore 함수가 자동으로 호출되도록 등록
     atexit.register(close_vectorstore)
 
-    # 클라이언트 생성 함수
-    @st.cache_resource
-    def get_vision_client():
-        if "google" in st.secrets:
-            creds_info = json.loads(st.secrets["google"]["credentials"])
-            credentials = service_account.Credentials.from_service_account_info(creds_info)
-            return vision.ImageAnnotatorClient(credentials=credentials)
-        else:
-            raise Exception("Google credentials not found in Streamlit secrets.")
-    
-    # OCR 함수 정의 (credentials 인자 추가)
-    def detect_text(image_path, credentials):
-        # credentials를 명시적으로 전달
-        client = vision.ImageAnnotatorClient(credentials=credentials)
-        
+    client = vision.ImageAnnotatorClient(credentials=credentials)
+
+    def detect_text(image_path):
         with io.open(image_path, 'rb') as image_file:
             content = image_file.read()
-        
+    
         image = vision.Image(content=content)
         response = client.text_detection(image=image)
     
         if response.error.message:
             raise Exception(f"Google Vision API 오류: {response.error.message}")
-        
+    
         texts = response.text_annotations
-        return texts[0].description if texts else ""
+        if not texts:
+            return ""
+    
+        return texts[0].description
 
     # 질문 유형 분석 함수
     def analyze_question_type(prompt):
