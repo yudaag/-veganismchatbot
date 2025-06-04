@@ -1,13 +1,7 @@
 streamlit
-dotenv
-google-cloud-vision
-langchain-community
-langchain-openai
-langchain-chroma
-pandas
+python-dotenv
+google-cloud-vision==3.5.2
 langchain
-pysqlite3-binary
 chromadb==0.4.24
+pandas
 numpy==1.26.4
-
-
