@@ -11,6 +11,12 @@ from google.cloud import vision
 from dotenv import load_dotenv
 import base64
 import difflib
+try:
+    import pysqlite3
+    import sys
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass  # fallback to built-in sqlite3
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOpenAI
