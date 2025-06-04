@@ -4,17 +4,10 @@ langchain-community
 langchain-openai
 langchain-chroma
 pandas
-protobuf==3.20.3
 langchain
 pysqlite3-binary
 chromadb==0.4.24
 numpy==1.26.4
-google-cloud-vision==3.4.5
-google-auth==2.29.0
-google-auth-oauthlib==1.2.0
-google-api-core==2.18.0
-google-cloud-core==2.4.1
-protobuf==4.25.3
-grpcio==1.64.0
+
 
 
