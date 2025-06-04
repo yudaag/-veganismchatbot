@@ -8,9 +8,5 @@ langchain-community
 langchain-openai
 langchain-chroma
 chromadb==0.4.24
-pysqlite3-binary
-langchain
-langchain-community
 openai
-chromadb
 protobuf==3.20.3
