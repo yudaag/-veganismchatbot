@@ -38,9 +38,9 @@ def show():
     load_dotenv()
 
     if "google" in st.secrets:
-    creds_info = json.loads(st.secrets["google"]["credentials"])
-    credentials = service_account.Credentials.from_service_account_info(creds_info)
-    
+        creds_info = json.loads(st.secrets["google"]["credentials"])
+        credentials = service_account.Credentials.from_service_account_info(creds_info)
+        
     # Streamlit Secrets에서 서비스 계정 정보 가져오기
     if "google" in st.secrets:
         google_creds = st.secrets["google"]["credentials"]
