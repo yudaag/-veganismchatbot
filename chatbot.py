@@ -22,35 +22,27 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain.memory import ConversationBufferMemory
 from langchain_core.runnables import RunnableMap, RunnableLambda, RunnablePassthrough
 
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
 def show():
 
-    import os
     import streamlit as st
-    import json
-    from google.cloud import vision
-    from google.oauth2 import service_account
     from dotenv import load_dotenv
+    import os
+    import json
+    import tempfile
+    from google.oauth2 import service_account
     
-    # 환경변수 로드 (.env 파일 로컬 개발용)
+    # 환경 변수 로드
     load_dotenv()
-
-    if "google" in st.secrets:
-        creds_info = json.loads(st.secrets["google"]["credentials"])
-        credentials = service_account.Credentials.from_service_account_info(creds_info)
-        client = vision.ImageAnnotatorClient(credentials=credentials)
-
-    if "google" in st.secrets and "credentials" in st.secrets["google"]:
-        creds_info = json.loads(st.secrets["google"]["credentials"])
-        credentials = service_account.Credentials.from_service_account_info(creds_info)
-
-    else:
-        # 로컬 실행 시 환경변수에서 경로를 불러오는 방식 유지
-        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        client = vision.ImageAnnotatorClient.from_service_account_file(credentials_path)
-
+    openai_key = st.secrets["OPENAI_API_KEY"]
+    
+    # google_credentials를 dict로 변환
+    creds_info = dict(st.secrets["google_credentials"])
+    
+    # 임시 JSON 파일 생성
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as f:
+        json.dump(creds_info, f)  # 🔥 여기서 dict만 가능
+        f.flush()
+        credentials = service_account.Credentials.from_service_account_file(f.name)
 
     def get_image_base64(image_path):
         with open(image_path, "rb") as image_file:
@@ -114,24 +106,22 @@ def show():
         else:
             raise Exception("Google credentials not found in Streamlit secrets.")
     
-    # OCR 함수 정의
-    def detect_text(image_path):
-        client = get_vision_client()
-    
+    # OCR 함수 정의 (credentials 인자 추가)
+    def detect_text(image_path, credentials):
+        # credentials를 명시적으로 전달
+        client = vision.ImageAnnotatorClient(credentials=credentials)
+        
         with io.open(image_path, 'rb') as image_file:
             content = image_file.read()
-    
+        
         image = vision.Image(content=content)
         response = client.text_detection(image=image)
     
         if response.error.message:
             raise Exception(f"Google Vision API 오류: {response.error.message}")
-    
+        
         texts = response.text_annotations
-        if not texts:
-            return ""
-    
-        return texts[0].description
+        return texts[0].description if texts else ""
 
     # 질문 유형 분석 함수
     def analyze_question_type(prompt):
