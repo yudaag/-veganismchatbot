@@ -98,9 +98,8 @@ def show():
     # 프로그램 종료 시 close_vectorstore 함수가 자동으로 호출되도록 등록
     atexit.register(close_vectorstore)
 
-    client = vision.ImageAnnotatorClient(credentials=credentials)
-
     def detect_text(image_path):
+        client = vision.ImageAnnotatorClient(credentials=credentials)
         with io.open(image_path, 'rb') as image_file:
             content = image_file.read()
     
