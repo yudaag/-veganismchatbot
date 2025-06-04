@@ -435,7 +435,16 @@ def show():
 
                 # ✅ 벡터스토어가 없으면 초기화
                 if "vectorstore" not in st.session_state:
-                    persist_dir = r"D:\veganism\veganchroma_db"
+                    # 📁 1. Chroma DB 압축 해제
+                    persist_dir = "veganchroma_db"  # 압축 해제 경로
+                    zip_path = "veganchroma_db.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
+                
+                    if not os.path.exists(persist_dir):
+                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                            zip_ref.extractall(persist_dir)
+                            print("✅ Chroma DB 압축 해제 완료")
+                
+                    # 🔍 2. Chroma 로드
                     embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                     st.session_state["vectorstore"] = Chroma(
                         persist_directory=persist_dir,
