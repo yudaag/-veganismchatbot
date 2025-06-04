@@ -1,7 +1,7 @@
 import streamlit as st
 import start
 import infoslide as infoslide
-import chatbot as chatbot
+import chatbot  
 import info as info
 
 def main():
