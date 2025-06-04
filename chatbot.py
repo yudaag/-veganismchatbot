@@ -122,7 +122,6 @@ def show():
     
         return texts[0].description
 
-
     # 질문 유형 분석 함수
     def analyze_question_type(prompt):
         if "성분" in prompt or "분석" in prompt:
@@ -135,8 +134,7 @@ def show():
             return "AGRIBALYSE.csv"
         elif "수자원" in prompt or "수자원 영향" in prompt:
             return [
-                "AGRIBALYSE.csv",
-                "물발자국의개념과산정_수식.csv"
+                "수자원문서.pdf"
             ]
         elif "일일 섭취량" in prompt or "칼로리" in prompt:
             return "칼로리.pdf"
@@ -243,12 +241,9 @@ def show():
             return None
 
         # 관련 문서 검색
-        # retriever 설정
         retriever = vectorstore.as_retriever()
-        retriever.search_kwargs = {
-            "filter": {"source": {"$in": document_name}},  # 문서 필터
-            "k": 5  # 많이 가져오게
-        }
+        retriever.search_kwargs = {"filter": {"source": document_name}}
+        relevant_docs = retriever.get_relevant_documents(prompt)
 
         # 디버깅: 관련 문서 출력
         print(f"관련 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
@@ -368,19 +363,32 @@ def show():
             else:
                 return "점수 계산을 위한 입력 값이 부족합니다."
         return None
-    
-    # ✅ 응답에서 점수를 추출하여 저장하는 함수
-    def store_score_from_response(response):
-        if "total_scores" not in st.session_state:
-            st.session_state["total_scores"] = []
 
-        # mPt 또는 kcal 또는 '칼로리' 포함된 점수들을 추출하여 저장
-        matches = re.findall(r'(\d+(?:\.\d+)?)\s*(?:mPt|kcal|칼로리)', response, re.IGNORECASE)
-        for match in matches:
-            score = float(match)
-            st.session_state["total_scores"].append(score)
+    def extract_gram_from_prompt(prompt):
+        # 사용자 입력에서 g 단위와 그에 해당하는 숫자를 추출 (예: "600g", "150g")
+        match = re.search(r'(\d+)\s*g\s*당', prompt)
+        return int(match.group(1)) if match else None
 
-        
+    def store_score_from_response(response, expected_gram=None):
+        if "calorie_scores" not in st.session_state:
+            st.session_state["calorie_scores"] = []
+
+        if expected_gram is None:
+            print("[❌ 무시됨] g 단위가 질문에 없음.")
+            return
+
+        # 예: '600g당 173kcal' 와 정확히 매칭
+        pattern = fr'{expected_gram}\s*g\s*당.*?(\d+(?:\.\d+)?)\s*(?:kcal|칼로리)'  # 'g당 칼로리' 추출
+        match = re.search(pattern, response)
+        if match:
+            score = float(match.group(1))
+            st.session_state["calorie_scores"].append(score)
+            print(f"[✅ 저장됨] {expected_gram}g당 {score} kcal")
+            print(f"[📦 전체 목록] {st.session_state['calorie_scores']}")
+        else:
+            print(f"[❌ 저장 실패] 응답에 {expected_gram}g당 칼로리 정보가 없음.")
+
+
 # Streamlit UI 시작
 # --- 사이드바: 사용자 정보 요약 ---
     with st.sidebar:
@@ -389,9 +397,9 @@ def show():
         user_info = st.session_state.get("user_info", {})
 
         st.markdown(f"**이름:** {user_info.get('name', '미입력')}")
-        st.markdown(f"**성별:** {user_info.get('gender', '미입력')}")
+        st.markdown(f"**비건 종류:** {', '.join(user_info.get('types', [])) if user_info.get('types') else '미입력'}")
         st.markdown(f"**나이:** {user_info.get('age', '미입력')}")
-        st.markdown(f"**식이 범위:** {', '.join(user_info.get('types', [])) if user_info.get('types') else '미입력'}") 
+        st.markdown(f"**성별:** {user_info.get('gender', '미입력')}")
         st.markdown(f"**알러지:** {user_info.get('allergy', '없음')}")
 
         if st.button("정보 수정"):
@@ -428,13 +436,12 @@ def show():
 
                 # ✅ 벡터스토어가 없으면 초기화
                 if "vectorstore" not in st.session_state:
-                    persist_dir = "veganchroma_db"
+                    persist_dir = r"D:\veganism\veganchroma_db"
                     embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                     st.session_state["vectorstore"] = Chroma(
                         persist_directory=persist_dir,
                         embedding_function=embedding_function
                     )
-
 
                 # ✅ 기존 OCR 벡터 삭제 및 새로 추가
                 st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
@@ -486,15 +493,21 @@ def show():
             return 
 
         # ✅ 종료 인사 감지 및 응답 → 즉시 return
-        farewell_phrases = ["고마워", "감사", "또 올게", "다음에"]
-        if any(phrase in prompt.lower() for phrase in farewell_phrases):
-            farewell_response = "이용해 주셔서 감사합니다! 언제든지 다시 찾아주세요 😊"
-            chat_message("assistant", farewell_response)
-            st.session_state["memory"].chat_memory.add_ai_message(farewell_response)
-            st.session_state.messages.append({"role": "assistant", "content": farewell_response})
-            return 
-        
-        keywords = ["성분", "비건", "알러지", "환경 영향", "수자원", "칼로리", "식이범위", "감자칩", "환경 점수", "환경 영향 점수"]
+        if any(phrase in prompt for phrase in ["총합", "오늘", "하루", "총 점수", "전체 점수", "모든 점수"]):
+            total_score = sum(st.session_state.get("calorie_scores", []))
+            if total_score > 0:
+                response = f"지금까지 저장된 칼로리 총합은 약 {int(total_score)} kcal 입니다."
+            else:
+                response = "아직 칼로리 정보를 저장한 적이 없어요. 🤔 '(150g 당 칼로리는 몇이야?)'처럼 질문해 주세요."
+            
+            chat_message("assistant", response)
+            st.session_state["memory"].chat_memory.add_ai_message(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            return
+
+# 수정 줄 시작        
+        keywords = ["수자원", "성분", "비건", "알러지", "환경 영향", "수자원", "칼로리", "식이범위", "감자칩", "환경 점수", "환경 영향 점수"]
+# 수정 줄  끝
 
 
         # '점수' 키워드가 포함된 질문이면 점수 계산만 출력
@@ -542,19 +555,17 @@ def show():
             return  # 함수 실행을 종료하고, 더 이상 다른 코드가 실행되지 않도록 함
         
         if any(phrase in prompt for phrase in ["총합", "오늘", "하루", "총 점수", "전체 점수", "모든 점수"]):
-            total_score = sum(st.session_state.get("total_scores", []))
+            total_score = sum(st.session_state.get("calorie_scores", []))  # ✅ 수정된 부분
             if total_score > 0:
-                response = f"지금까지의 총 칼로리 합은 약 {int(total_score)} kcal 입니다."
+                response = f"지금까지 저장된 칼로리 총합은 약 {int(total_score)} kcal 입니다."
             else:
-                response = "아직 합산할 점수가 없어요. 🤔 먼저 환경 점수나 칼로리 등을 계산해 주세요."
+                response = "아직 칼로리 정보를 저장한 적이 없어요. 🤔 '(150g 당 칼로리는 몇이야?)'처럼 질문해 주세요."
             
             chat_message("assistant", response)
             st.session_state["memory"].chat_memory.add_ai_message(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-            # 🔹 챗봇 응답에 포함된 숫자 점수 저장
-            store_score_from_response(response)
-
+            # 필요 시: 이 응답은 저장 안 해도 됨 (총합 결과이므로)
             return
 
 
@@ -572,7 +583,7 @@ def show():
             document_name = [document_name] if document_name else []
         document_name.append("user_ocr")
 
-        retriever.search_kwargs = {"filter": {"source": {"$in": document_name}},"k": 2 }
+        retriever.search_kwargs = {"filter": {"source": {"$in": document_name}}}
 
         rag_prompt = ChatPromptTemplate.from_template("""
         당신은 비거니즘 관련 질문에 답하는 챗봇입니다.
@@ -585,27 +596,24 @@ def show():
         참고 문서: {context_docs}
         """)
 
-        def filter_docs_by_keywords(docs, keywords):
-            keywords = [k.lower() for k in keywords]
-            return [doc for doc in docs if any(k in doc.page_content.lower() for k in keywords)]
-
-
-        # RunnableMap 내에서 사전정보 기반 검색 수행
         rag_chain = (
             RunnableMap({
                 "question": RunnablePassthrough(),
                 "ocr_text": RunnablePassthrough(),
-                "user_info": RunnablePassthrough(),
-                "name": RunnablePassthrough(),
                 "context_docs": RunnableLambda(
-                    lambda input: filter_docs_by_keywords(
-                        retriever.get_relevant_documents(" ".join(input["user_info"].get("types", []))),
-                        keywords=input["user_info"].get("types", [])
+                    lambda input: (
+                        retriever.get_relevant_documents(input["question"])
+                        if isinstance(input, dict)
+                        else retriever.get_relevant_documents(input)
                     )
                 )
-            }) | rag_prompt | llm | StrOutputParser()
+                | (lambda docs: "\n\n".join(doc.page_content for doc in docs)),
+                "name": RunnablePassthrough(),  # 추가
+            })
+            | rag_prompt
+            | llm
+            | StrOutputParser()
         )
-
 
 
         # ✅ OCR 및 비건 관련 질문일 때만 사용자 정보를 포함
@@ -618,7 +626,6 @@ def show():
             "name": user_info.get("name", "사용자"),
             "question": question_input,
             "ocr_text": st.session_state["ocr_text"],
-            "user_info": user_info,
             "context_docs": "..."  # 이 부분은 retriever 통해서 만든 텍스트
         }
 
@@ -646,7 +653,9 @@ def show():
                 "비건": "모든 동물성 식품을 배제하는 식단",
                 "오보": "달걀은 허용하지만 기타 동물성 식품은 금지되는 식단",
                 "락토": "우유는 허용하지만 기타 동물성 식품은 금지되는 식단",
-                "락토오보": "달걀과 우유는 허용되며 그 외 동물성 식품은 금지되는 식단"
+                "락토오보": "달걀과 우유는 허용되며 그 외 동물성 식품은 금지되는 식단",
+                "페스코": "생선은 허용되지만 육류와 유제품은 금지되는 식단",
+                "플렉시테리언": "가끔 동물성 식품을 섭취하는 유연한 식단"
             }
 
             descriptions = [type_descriptions.get(t, "") for t in types]
@@ -697,8 +706,14 @@ def show():
         st.session_state.messages.append({"role": "assistant", "content": combined_answer})
         chat_message("assistant", combined_answer)
 
-        store_score_from_response(answer_from_db)
-        store_score_from_response(answer_from_gpt)
+        
+        # ✅ 여기에 조건부 저장 코드 추가
+        expected_gram = extract_gram_from_prompt(prompt)
+
+        if expected_gram:
+            # GPT 기반 답변에서만 저장
+            store_score_from_response(answer_from_gpt, expected_gram)
+
 
         # 문서 관련 정보도 출력
         docs = retriever.get_relevant_documents(prompt)
