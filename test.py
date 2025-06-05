@@ -3,6 +3,8 @@ import sqlite3
 
 st.write("Python sqlite3 version:", sqlite3.sqlite_version)
 st.write("Python version:", sqlite3.version)
+api_key = st.secrets["OPENAI_API_KEY"]
+embedding_function = OpenAIEmbeddings(model="text-embedding-3-large", openai_api_key=api_key)
 
 import streamlit as st
 import os
