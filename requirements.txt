@@ -11,3 +11,5 @@ chromadb==0.4.24
 openai
 protobuf==3.20.3
 pysqlite3-binary  # ✅ SQLite 3.35 이상을 강제로 로드하기 위한 패키지
+
+
