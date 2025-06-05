@@ -477,38 +477,6 @@ def show():
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.stop()
 
-# 수정 줄 시작        
-        keywords = ["성분", "분석", "성분 분석", "식이 범위", "식이범위", "알러지", "알레르기", "환경영향", "수자원", "점수", "환경 영향 점수", "칼로리"]
-# 수정 줄  끝
-
-
-        # '점수' 키워드가 포함된 질문이면 점수 계산만 출력
-        if "점수" in prompt or "환경 점수" in prompt or "환경 영향 점수" in prompt:
-            result = calculate_environmental_impact_with_score(prompt)
-            
-            if result:  # 점수 계산 결과가 존재하면
-                chat_message("assistant", result)  # 계산된 점수 출력
-                st.session_state["memory"].chat_memory.add_ai_message(result)  # 계산된 결과 메모리에 추가
-                st.session_state.messages.append({"role": "assistant", "content": result})  # 세션 메시지에 추가
-            else:
-                # 계산 값이 없을 경우
-                error_message = "❗ 점수를 계산하기 위한 값이 부족합니다. 다시 시도해주세요."
-                chat_message("assistant", error_message)  # 오류 메시지 출력
-                st.session_state["memory"].chat_memory.add_ai_message(error_message)  # 오류 메시지 메모리에 추가
-                st.session_state.messages.append({"role": "assistant", "content": error_message})  # 오류 메시지 세션에 추가
-            return
-
-        # 다른 키워드가 포함된 질문은 비건 관련 메시지 출력
-        if not any(keyword in prompt for keyword in keywords):
-            no_relevant_msg = (
-                "죄송합니다. 해당 질문은 비거니즘에 관련된 질문이 아닙니다.😅😅 "
-                "비건니즘에 관련된 질문이 있다면 언제든지 질문해주세요!"
-            )
-            chat_message("assistant", no_relevant_msg)  # 답변 출력
-            st.session_state["memory"].chat_memory.add_ai_message(no_relevant_msg)  # 메모리에 저장
-            st.session_state.messages.append({"role": "assistant", "content": no_relevant_msg})  # 세션 메시지에 추가
-            return
-        
         # ✅ 환경 영향 질문이 포함된 경우에만 환경 영향 계산 함수 실행
         if "환경 영향" in prompt or "환경영향" in prompt:  # 사용자가 입력한 prompt에서 '환경 영향' 또는 '환경영향'이 포함되어 있으면
             # 환경 영향 계산 함수 호출
@@ -537,6 +505,37 @@ def show():
             st.session_state.messages.append({"role": "assistant", "content": response})
 
             # 필요 시: 이 응답은 저장 안 해도 됨 (총합 결과이므로)
+            return
+
+        # '점수' 키워드가 포함된 질문이면 점수 계산만 출력
+        if "점수" in prompt or "환경 점수" in prompt or "환경 영향 점수" in prompt:
+            result = calculate_environmental_impact_with_score(prompt)
+            
+            if result:  # 점수 계산 결과가 존재하면
+                chat_message("assistant", result)  # 계산된 점수 출력
+                st.session_state["memory"].chat_memory.add_ai_message(result)  # 계산된 결과 메모리에 추가
+                st.session_state.messages.append({"role": "assistant", "content": result})  # 세션 메시지에 추가
+            else:
+                # 계산 값이 없을 경우
+                error_message = "❗ 점수를 계산하기 위한 값이 부족합니다. 다시 시도해주세요."
+                chat_message("assistant", error_message)  # 오류 메시지 출력
+                st.session_state["memory"].chat_memory.add_ai_message(error_message)  # 오류 메시지 메모리에 추가
+                st.session_state.messages.append({"role": "assistant", "content": error_message})  # 오류 메시지 세션에 추가
+            return
+            
+# 수정 줄 시작        
+        keywords = ["성분", "분석", "성분 분석", "식이 범위", "식이범위", "알러지", "알레르기", "환경영향", "수자원", "점수", "환경 영향 점수", "칼로리"]
+# 수정 줄  끝
+
+        # 다른 키워드가 포함된 질문은 비건 관련 메시지 출력
+        if not any(keyword in prompt for keyword in keywords):
+            no_relevant_msg = (
+                "죄송합니다. 해당 질문은 비거니즘에 관련된 질문이 아닙니다.😅😅 "
+                "비건니즘에 관련된 질문이 있다면 언제든지 질문해주세요!"
+            )
+            chat_message("assistant", no_relevant_msg)  # 답변 출력
+            st.session_state["memory"].chat_memory.add_ai_message(no_relevant_msg)  # 메모리에 저장
+            st.session_state.messages.append({"role": "assistant", "content": no_relevant_msg})  # 세션 메시지에 추가
             return
 
 
