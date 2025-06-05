@@ -215,7 +215,7 @@ def show():
             no_match_response = (
                 "❗죄송합니다. 해당 질문은 현재 지원하지 않습니다.\n"
                 "다음과 같은 주제로 질문해 주세요:\n"
-                "- 성분 분석, 비건 종류, 알레르기, 환경 영향, 수자원, 칼로리 등"
+                "- 성분 분석, 식이범위 종류, 알레르기, 환경 영향, 수자원, 칼로리 등"
             )
             chat_message("assistant", no_match_response)
             st.session_state["memory"].chat_memory.add_ai_message(no_match_response)
@@ -644,7 +644,7 @@ def show():
         # ✅ GPT로 질문 주제 분류
         def classify_question_with_gpt(question: str) -> str:
             classification_prompt = f"""
-        다음 질문의 주제를 분류하세요. 항목: 비건(v), 알러지(a), 칼로리(n), 환경 영향(e)
+        다음 질문의 주제를 분류하세요. 항목: 식이범위(v), 알러지(a), 칼로리(n), 환경 영향(e)
         질문: "{question}"
         정답은 v, a, n, e 중 하나로만 대답하세요.
         """
