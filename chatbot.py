@@ -425,7 +425,7 @@ def show():
                 tmp_file.write(uploaded_image.getvalue())
                 tmp_path = tmp_file.name
 
-            try:
+        try:
                 ocr_text = detect_text(tmp_path)
                 st.session_state["ocr_text"] = ocr_text
                 st.session_state["ocr_done"] = True
@@ -450,6 +450,8 @@ def show():
                 )
             else:
                 print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
+        except Exception as e:
+            st.error(f"벡터 DB 로드 중 오류 발생: {e}")
             
             # 문서 추가 및 검색
             if uploaded_image is not None:
