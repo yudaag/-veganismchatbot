@@ -11,8 +11,11 @@ langchain
 langchain-community
 langchain-openai
 
+pandas
+requests
+faiss-cpu
 # ✅ FAISS 벡터 DB용
-faiss-cpu==1.7.4  # 💡 FAISS 핵심 패키지 (GPU 아니면 cpu 버전 사용)
+#faiss-cpu==1.7.4  # 💡 FAISS 핵심 패키지 (GPU 아니면 cpu 버전 사용)
 
 # ❌ ChromaDB는 제거
 # chromadb==0.4.24  ← 삭제
