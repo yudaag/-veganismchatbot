@@ -434,24 +434,29 @@ def show():
                 st.session_state["ocr_done"] = True
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
-
-                # ✅ 벡터스토어가 없으면 초기화
+            
+                # 벡터스토어가 없으면 초기화
                 if "vectorstore" not in st.session_state:
-                    # 📁 1. Chroma DB 압축 해제
+                    # Chroma DB 압축 해제
                     persist_dir = "veganchroma_db"  # 압축 해제 경로
                     zip_path = "veganchroma_db.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
-                
+            
                     if not os.path.exists(persist_dir):
                         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                             zip_ref.extractall(persist_dir)
                             print("✅ Chroma DB 압축 해제 완료")
-                
-                    # 🔍 2. Chroma 로드
+            
+                    # Chroma 로드
                     embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                     st.session_state["vectorstore"] = Chroma(
                         persist_directory=persist_dir,
                         embedding_function=embedding_function
                     )
+                else:
+                    print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
+            except Exception as e:
+                st.error(f"벡터 DB 로드 중 오류 발생: {e}")
+
 
                 # ✅ 기존 OCR 벡터 삭제 및 새로 추가
                 st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
