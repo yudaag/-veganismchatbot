@@ -8,6 +8,14 @@ except ImportError:
 
 
 
+# 🔒 sqlite3 교체를 최상단에서 먼저 수행해야 함
+try:
+    import pysqlite3
+    import sys
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass  # fallback to built-in sqlite3
+
 # ✅ 그 이후에야 chromadb 관련 모듈 import 가능
 from langchain_chroma import Chroma
 import zipfile
@@ -97,8 +105,6 @@ def show():
     def close_vectorstore():
         # 세션 상태에 'vectorstore'가 존재하는지 확인
         if "vectorstore" in st.session_state:
-            doc_count = st.session_state["vectorstore"]._collection.count()
-            st.markdown(f"📄 **벡터 DB 문서 개수: {doc_count}개**")
             try:
                 # 내부 Chroma client를 안전하게 종료
                 st.session_state["vectorstore"]._client.client.close()
@@ -247,7 +253,7 @@ def show():
 
         # 관련 문서 검색
         retriever = vectorstore.as_retriever()
-        retriever.search_kwargs = {"filter": {"source": {"$in": [document_name]}}}
+        retriever.search_kwargs = {"filter": {"source": document_name}}
         relevant_docs = retriever.get_relevant_documents(prompt)
 
         # 디버깅: 관련 문서 출력
@@ -438,32 +444,24 @@ def show():
                 st.session_state["ocr_done"] = True
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
-            
-                # 벡터스토어가 없으면 초기화
+
+                # ✅ 벡터스토어가 없으면 초기화
                 if "vectorstore" not in st.session_state:
-                    # Chroma DB 압축 해제
+                    # 📁 1. Chroma DB 압축 해제
                     persist_dir = "veganchroma_db"  # 압축 해제 경로
                     zip_path = "veganchroma_db.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
-            
+                
                     if not os.path.exists(persist_dir):
                         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                             zip_ref.extractall(persist_dir)
                             print("✅ Chroma DB 압축 해제 완료")
-            
-                    # Chroma 로드
+                
+                    # 🔍 2. Chroma 로드
                     embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                     st.session_state["vectorstore"] = Chroma(
                         persist_directory=persist_dir,
                         embedding_function=embedding_function
                     )
-                    print("문서 개수:", st.session_state["vectorstore"]._collection.count())
-
-                else:
-                    print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
-                    
-            except Exception as e:
-                st.error(f"벡터 DB 로드 중 오류 발생: {e}")
-
 
                 # ✅ 기존 OCR 벡터 삭제 및 새로 추가
                 st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
@@ -649,11 +647,9 @@ def show():
             "question": question_input,
             "ocr_text": st.session_state["ocr_text"],
             "context_docs": "..."  # 이 부분은 retriever 통해서 만든 텍스트
-
         }
 
         docs = retriever.get_relevant_documents(prompt)
-
         
         if document_name is None:
             unknown_response = "잘 모르겠습니다. 질문은 성분, 비건, 알러지, 환경 영향, 수자원, 칼로리 등과 관련되어야 합니다."
