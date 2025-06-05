@@ -1,5 +1,7 @@
 import streamlit as st
 import sqlite3
+from langchain.embeddings import OpenAIEmbeddings
+
 
 st.write("Python sqlite3 version:", sqlite3.sqlite_version)
 st.write("Python version:", sqlite3.version)
