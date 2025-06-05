@@ -426,21 +426,21 @@ def show():
                 tmp_path = tmp_file.name
 
         try:
-                ocr_text = detect_text(tmp_path)
-                st.session_state["ocr_text"] = ocr_text
-                st.session_state["ocr_done"] = True
-                st.success("✅ OCR 처리 완료! 추출된 텍스트:")
-                st.text_area("OCR 텍스트", ocr_text, height=300)
-
-           if "vectorstore" not in st.session_state:
+            ocr_text = detect_text(tmp_path)
+            st.session_state["ocr_text"] = ocr_text
+            st.session_state["ocr_done"] = True
+            st.success("✅ OCR 처리 완료! 추출된 텍스트:")
+            st.text_area("OCR 텍스트", ocr_text, height=300)
+        
+            if "vectorstore" not in st.session_state:
                 persist_dir = "veganchroma_db11"
                 zip_path = "veganchroma_db11.zip"
-    
+        
                 if not os.path.exists(persist_dir):
                     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                         zip_ref.extractall(persist_dir)
                         print("✅ Chroma DB 압축 해제 완료")
-    
+        
                 embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                 st.session_state["vectorstore"] = Chroma(
                     persist_directory=persist_dir,
@@ -450,6 +450,7 @@ def show():
                 print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
         except Exception as e:
             st.error(f"벡터 DB 로드 중 오류 발생: {e}")
+
             
             # 문서 추가 및 검색
             if uploaded_image is not None:
