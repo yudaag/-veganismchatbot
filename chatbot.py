@@ -6,13 +6,6 @@ try:
 except ImportError:
     pass  # fallback to built-in sqlite3
 
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 
 # ✅ 그 이후에야 chromadb 관련 모듈 import 가능
@@ -654,10 +647,6 @@ def show():
         }
 
         docs = retriever.get_relevant_documents(prompt)
-        st.code(f"📄 검색된 문서 수: {len(docs)}")
-        for d in docs:
-            st.code(f"✔ 문서 출처: {d.metadata.get('source')}, 제품명: {d.metadata.get('product_name')}")
-
 
         
         if document_name is None:
