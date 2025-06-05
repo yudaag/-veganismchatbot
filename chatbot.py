@@ -6,16 +6,6 @@ try:
 except ImportError:
     pass  # fallback to built-in sqlite3
 
-
-
-# 🔒 sqlite3 교체를 최상단에서 먼저 수행해야 함
-try:
-    import pysqlite3
-    import sys
-    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-except ImportError:
-    pass  # fallback to built-in sqlite3
-
 # ✅ 그 이후에야 chromadb 관련 모듈 import 가능
 from langchain_chroma import Chroma
 import zipfile
