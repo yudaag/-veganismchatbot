@@ -1,4 +1,3 @@
-# ✅ 그 이후에야 chromadb 관련 모듈 import 가능
 from langchain_community.vectorstores import FAISS  # ✅ FAISS용 모듈
 import zipfile
 import os
