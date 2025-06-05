@@ -1,9 +1,18 @@
 streamlit==1.45.1
-chromadb==0.4.24
-pysqlite3-binary==0.5.2
+pandas
+openai
+python-dotenv
+
+# ✅ FAISS를 위한 LangChain 구성요소
 langchain
 langchain-community
 langchain-openai
-openai
-python-dotenv
-pandas
+
+# ✅ FAISS 벡터 DB용
+faiss-cpu==1.7.4  # 💡 FAISS 핵심 패키지 (GPU 아니면 cpu 버전 사용)
+
+# ❌ ChromaDB는 제거
+# chromadb==0.4.24  ← 삭제
+
+# ✅ ChromaDB SQLite 호환용 패키지도 제거
+# pysqlite3-binary==0.5.2  ← 삭제
