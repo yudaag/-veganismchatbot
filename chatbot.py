@@ -426,13 +426,6 @@ def show():
                         allow_dangerous_deserialization=True
                     )
                     print("✅ FAISS 로드 완료")
-                    
-                # ✅ OCR 텍스트를 벡터스토어에 추가
-                ocr_doc = Document(
-                    page_content=ocr_text,
-                    metadata={"source": "user_ocr", "filename": uploaded_image.name}
-                )
-                st.session_state["vectorstore"].add_documents([ocr_doc])
 
                 # ✅ OCR 관련 시스템 메시지 기록
                 system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
