@@ -640,6 +640,10 @@ def show():
         }
 
         docs = retriever.get_relevant_documents(prompt)
+        print(f"📄 검색된 문서 수: {len(docs)}")
+        for d in docs:
+            print(f"✔ 문서 출처: {d.metadata.get('source')}, 제품명: {d.metadata.get('product_name')}")
+
         
         if document_name is None:
             unknown_response = "잘 모르겠습니다. 질문은 성분, 비건, 알러지, 환경 영향, 수자원, 칼로리 등과 관련되어야 합니다."
