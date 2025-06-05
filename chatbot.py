@@ -431,27 +431,6 @@ def show():
                 system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
                 st.session_state["memory"].chat_memory.add_user_message(system_message)
 
-                # ✅ 가장 최신의 user_ocr 문서만 나중에 사용하도록 따로 보관
-                retrieved_docs = st.session_state["vectorstore"].as_retriever().get_relevant_documents("user_ocr")
-
-                user_ocr_docs = [doc for doc in retrieved_docs if doc.metadata.get("source") == "user_ocr"]
-
-                if user_ocr_docs:
-                    latest_ocr_doc = sorted(
-                        user_ocr_docs,
-                        key=lambda d: d.metadata.get("filename", ""),
-                        reverse=True
-                    )[0]
-
-                    # OCR 텍스트 덮어쓰기 (중복 저장 방지용)
-                    st.session_state["ocr_text"] = latest_ocr_doc.page_content
-                else:
-                    st.error("❗ user_ocr 문서를 찾을 수 없습니다.")
-                    st.stop()
-            except Exception as e:
-                st.error(f"OCR 처리 중 오류 발생: {e}")
-                st.stop()
-
     # 초기 메시지 출력
     if "messages" not in st.session_state:
         st.session_state.messages = []
