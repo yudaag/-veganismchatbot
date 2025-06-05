@@ -112,7 +112,7 @@ def show():
     def analyze_question_type(prompt):
         if "성분" in prompt or "분석" in prompt:
             return "식품표시기준.pdf"
-        elif "식이 범위" in prompt or "식이범위" in prompt or "비건" in prompt:
+        elif "식이 범위" in prompt or "식이범위" in prompt :
             return "식이범위.pdf"
         elif "알러지" in prompt or "알레르기" in prompt:
             return "알러지.pdf"
