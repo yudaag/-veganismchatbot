@@ -3,6 +3,9 @@ pandas
 openai
 python-dotenv
 
+google-cloud-vision>=3.5.0
+
+
 # ✅ FAISS를 위한 LangChain 구성요소
 langchain
 langchain-community
@@ -16,3 +19,4 @@ faiss-cpu==1.7.4  # 💡 FAISS 핵심 패키지 (GPU 아니면 cpu 버전 사용
 
 # ✅ ChromaDB SQLite 호환용 패키지도 제거
 # pysqlite3-binary==0.5.2  ← 삭제
+
