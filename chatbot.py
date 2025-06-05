@@ -432,17 +432,15 @@ def show():
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
 
-            # 벡터 DB 로드 확인 후 이미 로드된 경우에는 다시 초기화하지 않음
-            if "vectorstore" not in st.session_state:
-                persist_dir = "veganchroma_db11"  # 압축 해제 경로
-                zip_path = "veganchroma_db11.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
-            
-                # 벡터 DB가 존재하지 않으면 초기화 및 로드
+           if "vectorstore" not in st.session_state:
+                persist_dir = "veganchroma_db11"
+                zip_path = "veganchroma_db11.zip"
+    
                 if not os.path.exists(persist_dir):
                     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                         zip_ref.extractall(persist_dir)
                         print("✅ Chroma DB 압축 해제 완료")
-            
+    
                 embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                 st.session_state["vectorstore"] = Chroma(
                     persist_directory=persist_dir,
