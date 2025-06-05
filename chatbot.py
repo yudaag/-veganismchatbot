@@ -252,7 +252,7 @@ def show():
 
         # 관련 문서 검색
         retriever = vectorstore.as_retriever()
-        retriever.search_kwargs = {"filter": {"source": {"$in": document_name}}}
+        retriever.search_kwargs = {"filter": {"source": {"$in": [document_name]}}}
         relevant_docs = retriever.get_relevant_documents(prompt)
 
         # 디버깅: 관련 문서 출력
