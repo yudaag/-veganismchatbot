@@ -402,22 +402,27 @@ def show():
 
                 # ✅ 벡터스토어가 없으면 FAISS로 초기화
                 if "vectorstore" not in st.session_state:
-                    # 📁 1. FAISS 압축 해제
-                    persist_dir = "faiss_db_merged"  # 압축 해제 경로
-                    zip_path = "faiss_db_merged.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
-
+                    # 📁 1. 절대경로 설정
+                    base_dir = os.path.dirname(os.path.abspath(__file__))  # 현재 실행 중인 파일 기준
+                    zip_path = os.path.join(base_dir, "faiss_db_merged.zip")
+                    persist_dir = os.path.join(base_dir, "faiss_db_merged")
+                
+                    # 📦 2. zip이 아직 해제되지 않았다면 압축 해제
                     if not os.path.exists(persist_dir):
                         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                             zip_ref.extractall(persist_dir)
                             print("✅ FAISS DB 압축 해제 완료")
-
-                    # 🔍 2. FAISS 로드
+                
+                    # 🔍 3. FAISS 로드
                     embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
                     st.session_state["vectorstore"] = FAISS.load_local(
                         persist_dir,
                         embedding_function,
                         allow_dangerous_deserialization=True
                     )
+                    print("✅ 현재 작업 디렉토리:", base_dir)
+                    print("📂 압축 해제 폴더 존재:", os.path.exists(persist_dir))
+                    print("📄 폴더 내 파일 목록:", os.listdir(persist_dir))
 
                 # ✅ OCR 텍스트를 벡터스토어에 추가
                 ocr_doc = Document(
