@@ -97,6 +97,8 @@ def show():
     def close_vectorstore():
         # 세션 상태에 'vectorstore'가 존재하는지 확인
         if "vectorstore" in st.session_state:
+            doc_count = st.session_state["vectorstore"]._collection.count()
+            st.markdown(f"📄 **벡터 DB 문서 개수: {doc_count}개**")
             try:
                 # 내부 Chroma client를 안전하게 종료
                 st.session_state["vectorstore"]._client.client.close()
@@ -454,8 +456,11 @@ def show():
                         persist_directory=persist_dir,
                         embedding_function=embedding_function
                     )
+                    print("문서 개수:", st.session_state["vectorstore"]._collection.count())
+
                 else:
                     print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
+                    
             except Exception as e:
                 st.error(f"벡터 DB 로드 중 오류 발생: {e}")
 
