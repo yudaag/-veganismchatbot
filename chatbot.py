@@ -561,8 +561,7 @@ def show():
         # ✅ RAG 프롬프트 정의 (1번만)
         rag_prompt = ChatPromptTemplate.from_template("""
         당신은 비거니즘 관련 질문에 답하는 챗봇입니다.
-        - 사용자의 비건 종류와 알러지를 고려해 최대한 정확히 답해주세요.
-
+        
         사용자 질문: {question}
 
         OCR 텍스트: {ocr_text}
