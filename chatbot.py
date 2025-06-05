@@ -468,21 +468,25 @@ def show():
                         st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                         st.text_area("OCR 텍스트", ocr_text, height=300)
             
-                        # 기존 OCR 벡터 삭제 및 새로 추가
-                        st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
-                        doc = Document(
-                            page_content=ocr_text,
-                            metadata={"source": "user_ocr", "filename": uploaded_image.name}
-                        )
-                        st.session_state["vectorstore"].add_documents([doc])
-            
-                        system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
-                        st.session_state["memory"].chat_memory.add_user_message(system_message)
-            
+                        if "vectorstore" not in st.session_state:
+                            persist_dir = "veganchroma_db11"
+                            zip_path = "veganchroma_db11.zip"
+                
+                            if not os.path.exists(persist_dir):
+                                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                                    zip_ref.extractall(persist_dir)
+                                    print("✅ Chroma DB 압축 해제 완료")
+                
+                            embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
+                            st.session_state["vectorstore"] = Chroma(
+                                persist_directory=persist_dir,
+                                embedding_function=embedding_function
+                            )
+                        else:
+                            print("✅ 벡터 DB 이미 로드됨. 새로 로드하지 않음.")
                     except Exception as e:
-                        st.error(f"OCR 처리 중 오류 발생: {e}")
-                        st.stop()
-
+                        st.error(f"벡터 DB 로드 중 오류 발생: {e}")
+                        
     # ✅ 최초 안내 멘트 출력
     if "messages" not in st.session_state:
         st.session_state.messages = []
