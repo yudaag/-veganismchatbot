@@ -1,3 +1,13 @@
+# 🔒 sqlite3 교체를 최상단에서 먼저 수행해야 함
+try:
+    import pysqlite3
+    import sys
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass  # fallback to built-in sqlite3
+
+# ✅ 그 이후에야 chromadb 관련 모듈 import 가능
+from langchain_chroma import Chroma
 import zipfile
 import os
 import streamlit as st
@@ -10,13 +20,6 @@ from google.cloud import vision
 from dotenv import load_dotenv
 import base64
 import difflib
-try:
-    import pysqlite3
-    import sys
-    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-except ImportError:
-    pass  # fallback to built-in sqlite3
-from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
