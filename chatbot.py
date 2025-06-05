@@ -643,6 +643,8 @@ def show():
             "name": user_info.get("name", "사용자"),
             "question": question_input,
             "ocr_text": st.session_state["ocr_text"],
+            "context_docs": "..."  # 이 부분은 retriever 통해서 만든 텍스트
+
         }
 
         docs = retriever.get_relevant_documents(prompt)
