@@ -1,13 +1,5 @@
-# 🔒 sqlite3 교체를 최상단에서 먼저 수행해야 함
-try:
-    import pysqlite3
-    import sys
-    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-except ImportError:
-    pass  # fallback to built-in sqlite3
-
 # ✅ 그 이후에야 chromadb 관련 모듈 import 가능
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS  # ✅ FAISS용 모듈
 import zipfile
 import os
 import streamlit as st
@@ -93,15 +85,9 @@ def show():
 
     # Chroma DB를 안전하게 종료하기 위한 함수 정의
     def close_vectorstore():
-        # 세션 상태에 'vectorstore'가 존재하는지 확인
         if "vectorstore" in st.session_state:
-            try:
-                # 내부 Chroma client를 안전하게 종료
-                st.session_state["vectorstore"]._client.client.close()
-                print("Chroma DB 안전 종료 완료")
-            except Exception as e:
-                # 오류 발생 시 예외 메시지 출력
-                print(f"Chroma DB 종료 오류: {e}")
+            print("✅ FAISS vectorstore는 별도 종료할 필요가 없습니다.")
+
 
     # 프로그램 종료 시 close_vectorstore 함수가 자동으로 호출되도록 등록
     atexit.register(close_vectorstore)
@@ -199,7 +185,6 @@ def show():
         "수자원 고갈(제품 당 m3 depriv./kg)": {"nf": 11468.70864, "weight": 8.51}
     }
 
-
     # 사용자 입력(prompt_text)에서 식품 하위 그룹(FOOD_SUBGROUP_LIST)을 추출하는 함수
     def match_food_subgroup_from_prompt(prompt_text):
         # FOOD_SUBGROUP_LIST에 있는 각 서브그룹을 순회
@@ -218,7 +203,6 @@ def show():
         return []  # 일치하는 카테고리가 없으면 빈 리스트 반환 (오류 방지용 기본값)
 
 
-    # 환경 영향 수치
     def calculate_environmental_impact(prompt, ocr_text):
         # 벡터 DB에서 "AGRIBALYSE.csv" 문서만 검색
         vectorstore = st.session_state["vectorstore"]
@@ -226,10 +210,8 @@ def show():
         # '환경 영향' 키워드가 포함된 질문만 처리
         document_name = analyze_question_type(prompt)
 
-        # 디버깅: document_name 확인
         print(f"문서 이름: {document_name}")
 
-        # 문서 이름이 없으면, 즉 키워드 조건에 부합하지 않으면 안내 멘트 출력 후 종료
         if not document_name:
             no_match_response = (
                 "❗죄송합니다. 해당 질문은 현재 지원하지 않습니다.\n"
@@ -241,47 +223,44 @@ def show():
             st.session_state.messages.append({"role": "assistant", "content": no_match_response})
             return None
 
-        # 관련 문서 검색
+        # FAISS에서는 search_kwargs에 filter 사용 불가 → 검색 후 수동 필터링
         retriever = vectorstore.as_retriever()
-        retriever.search_kwargs = {"filter": {"source": document_name}}
         relevant_docs = retriever.get_relevant_documents(prompt)
 
-        # 디버깅: 관련 문서 출력
+        # 문서 이름 기반 필터링 (ex: 'AGRIBALYSE.csv'만 선택)
+        if isinstance(document_name, str):
+            relevant_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == document_name]
+        elif isinstance(document_name, list):
+            relevant_docs = [doc for doc in relevant_docs if doc.metadata.get("source") in document_name]
+
         print(f"관련 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
 
-        # 식품군 필터링 (예: "아침용 시리얼과 비스킷")
+        # 식품군 필터링
         subgroup = match_food_subgroup_from_prompt(prompt)
         if subgroup:
             relevant_docs = [doc for doc in relevant_docs if doc.metadata.get('food_subgroup') == subgroup]
 
-        # 디버깅: 식품군 필터링 후 관련 문서 출력
         print(f"식품군 필터링된 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
 
-        # OCR 텍스트와 제품명 비교하여 가장 유사한 문서 찾기
+        # OCR 텍스트 기반 유사도 비교
         matching_docs = []
         for doc in relevant_docs:
             product_name = doc.metadata.get("product_name", "")
             similarity = difflib.SequenceMatcher(None, ocr_text, product_name).ratio()
             matching_docs.append((similarity, doc))
 
-        # 디버깅: 유사도 계산된 문서 출력
         print(f"유사도 계산된 문서: {[(doc[1].metadata.get('product_name'), doc[0]) for doc in matching_docs]}")
 
-        # 유사도 기준으로 정렬 후 상위 문서 선택 (예: 가장 유사한 문서 하나만)
         matching_docs.sort(reverse=True, key=lambda x: x[0])
         if not matching_docs:
             print("유사한 문서를 찾을 수 없습니다.")
             return None
 
         most_similar_doc = matching_docs[0][1]
-
-        # 디버깅: 가장 유사한 문서 확인
         print(f"가장 유사한 문서: {most_similar_doc.metadata.get('product_name')}")
 
-        # 선택된 환경 영향 항목 추출
+        # 환경 영향 항목 추출
         selected_cols = extract_impact_columns(prompt)
-
-        # 디버깅: 선택된 환경 영향 항목 출력
         print(f"선택된 환경 영향 항목: {selected_cols}")
 
         impact_data = []
@@ -298,55 +277,45 @@ def show():
 
             impact_data.append(impact_entry)
 
-        # 디버깅: 환경 영향 데이터 출력
         print(f"환경 영향 데이터: {impact_data}")
 
-        # 결과 DataFrame 반환
         if impact_data:
             impact_df = pd.DataFrame(impact_data)
-
-            # 디버깅: 최종 결과 DataFrame 출력
             print(f"결과 DataFrame: {impact_df}")
             return impact_df
         else:
             print("환경 영향 데이터가 없습니다.")
             return None
+        
+    def extract_values_from_prompt(prompt):
+        print(f"입력된 prompt: {prompt}")
+        items_values = re.findall(r"([^\-]+) - ([0-9.E-]+)", prompt)
+        print(f"추출된 항목과 값: {items_values}")
+        return items_values
 
-    # 점수 계산 함수
+    def get_user_inputs(prompt):
+        print(f"처리할 prompt: {prompt}")
+        items_values = extract_values_from_prompt(prompt)
+        user_inputs = {}
+
+        for item, value in items_values:
+            item = item.strip()
+            value = float(value)
+            user_inputs[item] = value
+            print(f"입력 값 저장: {item} -> {value}")
+
+        return user_inputs
+
     def calculate_score(user_inputs):
         score = 0
         for factor, value in user_inputs.items():
-            if factor in impact_factors:  # impact_factors에서 해당 항목을 찾음
+            if factor in impact_factors:
                 weight = impact_factors[factor]["weight"]
                 nf = impact_factors[factor]["nf"]
-                
-                # nf가 0이면 계산을 건너뛰고, 그렇지 않으면 계산
                 if nf != 0:
-                    factor_score = (value / nf) * weight * 1000  # 해당 factor에 대한 점수 계산
+                    factor_score = (value / nf) * weight * 1000
                     score += factor_score
         return score
-
-    # 사용자가 입력한 텍스트에서 수치 값을 추출하는 함수
-    def extract_values_from_prompt(prompt):
-        print(f"입력된 prompt: {prompt}")  # 디버깅용 print
-        # 정규식으로 " -"를 기준으로 항목과 값을 추출
-        items_values = re.findall(r"([^\-]+) - ([0-9.E-]+)", prompt)  # " -" 기준으로 항목과 값 추출
-        print(f"추출된 항목과 값: {items_values}")  # 디버깅용 print
-        return items_values
-
-    # 사용자 입력값을 받을 수 있는 함수 (다수의 입력값을 받는 구조)
-    def get_user_inputs(prompt):
-        print(f"처리할 prompt: {prompt}")  # 디버깅용 print
-        items_values = extract_values_from_prompt(prompt)  # 사용자 질문에서 항목과 수치 값을 추출
-        user_inputs = {}
-        
-        for item, value in items_values:
-            item = item.strip()  # 항목 이름의 앞뒤 공백 제거
-            value = float(value)  # 값을 float로 변환
-            user_inputs[item] = value  # 항목과 값을 딕셔너리에 저장
-            print(f"입력 값 저장: {item} -> {value}")  # 디버깅용 print
-            
-        return user_inputs
 
     # 환경 영향 계산 후 점수 계산 함수
     def calculate_environmental_impact_with_score(prompt):
@@ -390,13 +359,12 @@ def show():
             print(f"[❌ 저장 실패] 응답에 {expected_gram}g당 칼로리 정보가 없음.")
 
 
-# Streamlit UI 시작
-# --- 사이드바: 사용자 정보 요약 ---
+# Streamlit UI 시작----------------------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# --- 사이드바 ---
     with st.sidebar:
         st.markdown("### 사용자 정보")
-
         user_info = st.session_state.get("user_info", {})
-
         st.markdown(f"**이름:** {user_info.get('name', '미입력')}")
         st.markdown(f"**비건 종류:** {', '.join(user_info.get('types', [])) if user_info.get('types') else '미입력'}")
         st.markdown(f"**나이:** {user_info.get('age', '미입력')}")
@@ -408,21 +376,19 @@ def show():
             st.session_state.from_chatbot = False
             st.rerun()
 
-        uploaded_image = st.file_uploader("식품 라벨 이미지 업로드 (png, jpg, jpeg)", type=["png", "jpg", "jpeg"])
+        uploaded_image = st.file_uploader("식품 라벨 이미지 업로드", type=["png", "jpg", "jpeg"])
 
-
+    # 세션 상태 초기화
     if "memory" not in st.session_state:
         st.session_state["memory"] = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         st.session_state["ocr_text"] = None
-
-    if "calorie_answers" not in st.session_state:  # ✅ 이 줄 추가
+    if "calorie_answers" not in st.session_state:
         st.session_state["calorie_answers"] = []
-    
-    # ✅ 새로 업로드된 이미지를 저장
+
+    # 이미지 업로드 및 OCR 처리
     if uploaded_image is not None:
-        # ✅ 업로드된 이미지의 이름이 이전과 다른 경우 OCR 재실행
         if "prev_uploaded_filename" not in st.session_state or st.session_state["prev_uploaded_filename"] != uploaded_image.name:
-            st.session_state["prev_uploaded_filename"] = uploaded_image.name  # 새 이미지 이름 저장
+            st.session_state["prev_uploaded_filename"] = uploaded_image.name
 
             with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                 tmp_file.write(uploaded_image.getvalue())
@@ -435,52 +401,68 @@ def show():
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
 
-                # ✅ 벡터스토어가 없으면 초기화
+                # ✅ 벡터스토어가 없으면 FAISS로 초기화
                 if "vectorstore" not in st.session_state:
-                    # 📁 1. Chroma DB 압축 해제
-                    persist_dir = "veganchroma_db"  # 압축 해제 경로
-                    zip_path = "veganchroma_db.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
-                
+                    # 📁 1. FAISS 압축 해제
+                    persist_dir = "faiss_db"  # 압축 해제 경로
+                    zip_path = "faiss_db.zip"  # .zip 파일 경로 (프로젝트 루트 기준)
+
                     if not os.path.exists(persist_dir):
                         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                             zip_ref.extractall(persist_dir)
-                            print("✅ Chroma DB 압축 해제 완료")
-                
-                    # 🔍 2. Chroma 로드
+                            print("✅ FAISS DB 압축 해제 완료")
+
+                    # 🔍 2. FAISS 로드
                     embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
-                    st.session_state["vectorstore"] = Chroma(
-                        persist_directory=persist_dir,
-                        embedding_function=embedding_function
+                    st.session_state["vectorstore"] = FAISS.load_local(
+                        persist_dir,
+                        embedding_function,
+                        allow_dangerous_deserialization=True
                     )
 
-                # ✅ 기존 OCR 벡터 삭제 및 새로 추가
-                st.session_state["vectorstore"]._collection.delete(where={"source": "user_ocr"})
-                doc = Document(
+                # ✅ OCR 텍스트를 벡터스토어에 추가
+                ocr_doc = Document(
                     page_content=ocr_text,
                     metadata={"source": "user_ocr", "filename": uploaded_image.name}
                 )
-                st.session_state["vectorstore"].add_documents([doc])
+                st.session_state["vectorstore"].add_documents([ocr_doc])
 
+                # ✅ OCR 관련 시스템 메시지 기록
                 system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
                 st.session_state["memory"].chat_memory.add_user_message(system_message)
 
+                # ✅ 가장 최신의 user_ocr 문서만 나중에 사용하도록 따로 보관
+                retrieved_docs = st.session_state["vectorstore"].as_retriever().get_relevant_documents("user_ocr")
+
+                user_ocr_docs = [doc for doc in retrieved_docs if doc.metadata.get("source") == "user_ocr"]
+
+                if user_ocr_docs:
+                    latest_ocr_doc = sorted(
+                        user_ocr_docs,
+                        key=lambda d: d.metadata.get("filename", ""),
+                        reverse=True
+                    )[0]
+
+                    # OCR 텍스트 덮어쓰기 (중복 저장 방지용)
+                    st.session_state["ocr_text"] = latest_ocr_doc.page_content
+                else:
+                    st.error("❗ user_ocr 문서를 찾을 수 없습니다.")
+                    st.stop()
             except Exception as e:
                 st.error(f"OCR 처리 중 오류 발생: {e}")
                 st.stop()
 
-    # ✅ 최초 안내 멘트 출력
+    # 초기 메시지 출력
     if "messages" not in st.session_state:
         st.session_state.messages = []
         chat_message("assistant", "에코 비건에 대해 무엇이든 물어보세요!")
 
-    # ✅ 기존 메시지 출력
     for msg in st.session_state.messages:
         chat_message(msg["role"], msg["content"])
 
     prompt = st.chat_input("질문을 입력하세요")
 
     if prompt:
-        # 사용자 정보 구성
         user_info_text = (
             f"사용자 정보:\n"
             f"- 이름: {user_info.get('name', '')}\n"
@@ -493,6 +475,7 @@ def show():
         st.session_state.messages.append({"role": "user", "content": prompt})
         chat_message("user", prompt)
 
+
         # ✅ 종료 인사 감지 및 응답 → 즉시 return
         farewell_phrases = ["안녕", "안녕하세요", "질문"]
         if any(phrase in prompt.lower() for phrase in farewell_phrases):
@@ -502,18 +485,17 @@ def show():
             st.session_state.messages.append({"role": "assistant", "content": farewell_response})
             return 
 
-        # ✅ 종료 인사 감지 및 응답 → 즉시 return
-        if any(phrase in prompt for phrase in ["총합", "오늘", "하루", "총 점수", "전체 점수", "모든 점수"]):
+
+        if any(p in prompt for p in ["총합", "하루", "모든 점수"]):
             total_score = sum(st.session_state.get("calorie_scores", []))
             if total_score > 0:
                 response = f"지금까지 저장된 칼로리 총합은 약 {int(total_score)} kcal 입니다."
             else:
-                response = "아직 칼로리 정보를 저장한 적이 없어요. 🤔 '(150g 당 칼로리는 몇이야?)'처럼 질문해 주세요."
-            
+                response = "아직 칼로리 정보를 저장한 적이 없어요. 🤔"
             chat_message("assistant", response)
             st.session_state["memory"].chat_memory.add_ai_message(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
-            return
+            st.stop()
 
 # 수정 줄 시작        
         keywords = ["수자원", "성분", "비건", "알러지", "환경 영향", "수자원", "칼로리", "식이범위", "감자칩", "환경 점수", "환경 영향 점수"]
@@ -546,8 +528,7 @@ def show():
             st.session_state["memory"].chat_memory.add_ai_message(no_relevant_msg)  # 메모리에 저장
             st.session_state.messages.append({"role": "assistant", "content": no_relevant_msg})  # 세션 메시지에 추가
             return
-
-
+        
         # ✅ 환경 영향 질문이 포함된 경우에만 환경 영향 계산 함수 실행
         if "환경 영향" in prompt or "환경영향" in prompt:  # 사용자가 입력한 prompt에서 '환경 영향' 또는 '환경영향'이 포함되어 있으면
             # 환경 영향 계산 함수 호출
@@ -581,20 +562,23 @@ def show():
 
         if "vectorstore" not in st.session_state or st.session_state["ocr_text"] is None:
             chat_message("assistant", "❗ 먼저 이미지 업로드 및 OCR 처리를 완료해 주세요.")
-            return
+            st.stop()
 
         st.session_state["memory"].chat_memory.add_user_message(prompt)
 
         llm = ChatOpenAI(temperature=1)
         retriever = st.session_state["vectorstore"].as_retriever()
-        document_name = analyze_question_type(prompt)
 
+        document_name = analyze_question_type(prompt)
         if not isinstance(document_name, list):
             document_name = [document_name] if document_name else []
-        document_name.append("user_ocr")
+        document_name.append("user_ocr")  # OCR 문서 항상 포함
 
-        retriever.search_kwargs = {"filter": {"source": {"$in": document_name}}}
+        # 🔍 FAISS: 검색 후 수동 필터링
+        retrieved_docs = retriever.get_relevant_documents(prompt)
+        filtered_docs = [doc for doc in retrieved_docs if doc.metadata.get("source") in document_name]
 
+        # ✅ RAG 프롬프트 정의 (1번만)
         rag_prompt = ChatPromptTemplate.from_template("""
         당신은 비거니즘 관련 질문에 답하는 챗봇입니다.
         - 사용자의 비건 종류와 알러지를 고려해 최대한 정확히 답해주세요.
@@ -606,53 +590,50 @@ def show():
         참고 문서: {context_docs}
         """)
 
+
+        # ✅ RagChain 정의 - FAISS 호환 버전
         rag_chain = (
             RunnableMap({
                 "question": RunnablePassthrough(),
                 "ocr_text": RunnablePassthrough(),
-                "context_docs": RunnableLambda(
-                    lambda input: (
-                        retriever.get_relevant_documents(input["question"])
-                        if isinstance(input, dict)
-                        else retriever.get_relevant_documents(input)
-                    )
-                )
-                | (lambda docs: "\n\n".join(doc.page_content for doc in docs)),
-                "name": RunnablePassthrough(),  # 추가
+                "context_docs": lambda input: "\n\n".join(doc.page_content for doc in filtered_docs),
             })
             | rag_prompt
             | llm
             | StrOutputParser()
         )
 
-
         # ✅ OCR 및 비건 관련 질문일 때만 사용자 정보를 포함
         ocr_related_keywords = ["알러지", "식이 범위", "식이범위"]
         include_user_info = any(keyword in prompt for keyword in ocr_related_keywords)
 
+        # 사용자 정보 포함 여부에 따라 질문 구성
         question_input = (user_info_text if include_user_info else "") + "질문: " + prompt
 
+        # ✅ 문서 검색 및 수동 필터링 (FAISS는 필터링 미지원)
+        retrieved_docs = retriever.get_relevant_documents(prompt)
+        filtered_docs = [doc for doc in retrieved_docs if doc.metadata.get("source") in document_name]
+
+        # ✅ 최종 프롬프트 구성
         final_prompt = {
-            "name": user_info.get("name", "사용자"),
             "question": question_input,
             "ocr_text": st.session_state["ocr_text"],
-            "context_docs": "..."  # 이 부분은 retriever 통해서 만든 텍스트
+            "context_docs": "\n\n".join(doc.page_content for doc in filtered_docs)  # 직접 텍스트로 구성
         }
 
-        docs = retriever.get_relevant_documents(prompt)
-        
-        if document_name is None:
+        # 문서가 없거나 document_name이 None이면 예외 처리
+        if document_name is None or not filtered_docs:
             unknown_response = "잘 모르겠습니다. 질문은 성분, 비건, 알러지, 환경 영향, 수자원, 칼로리 등과 관련되어야 합니다."
             chat_message("assistant", unknown_response)
             st.session_state["memory"].chat_memory.add_ai_message(unknown_response)
             st.session_state.messages.append({"role": "assistant", "content": unknown_response})
-            return
-        
+            st.stop()
+
         with st.spinner("Thinking..."):
-            # 벡터 DB 기반 답변 생성
+            # 벡터 DB 기반 답변 생성 (이미 RagChain에서 filtered_docs를 context로 사용 중)
             answer_from_db = rag_chain.invoke(final_prompt)
 
-        # ✅ 사용자 비건 종류에 따른 부연 설명 프롬프트 생성 함수
+        # ✅ 사용자 비건 종류에 따른 부연 설명 생성 함수
         def get_vegan_type_explanation(user_info):
             types = user_info.get("types", [])
             if not types:
@@ -673,13 +654,14 @@ def show():
 
             return f"사용자는 {', '.join(types)} 식단을 따릅니다. ({description_text}) 이 식단 기준에 맞춰 부연 설명을 작성해 주세요."
 
-        # ✅ GPT 프롬프트 구성
+
+        # ✅ GPT 프롬프트 구성 (초기 임시 프롬프트)
         gpt_prompt = (
             f"여기 벡터 DB 기반 성분 분석 결과가 있습니다:\n{answer_from_db}\n\n"
             f"{get_vegan_type_explanation(user_info)}"
         )
 
-                # ✅ GPT로 질문 주제 분류
+        # ✅ GPT로 질문 주제 분류
         def classify_question_with_gpt(question: str) -> str:
             classification_prompt = f"""
         다음 질문의 주제를 분류하세요. 항목: 비건(v), 알러지(a), 칼로리(n), 환경 영향(e)
@@ -689,34 +671,44 @@ def show():
             classification = llm.invoke([{"role": "user", "content": classification_prompt}]).content.strip().lower()
             return classification
 
+        # ✅ 분류된 주제에 따라 GPT 프롬프트 재구성
         question_type = classify_question_with_gpt(prompt)
 
-        # ✅ GPT 프롬프트 주제별 생성
         if question_type == "v":
             gpt_prompt = (
                 f"다음은 벡터 DB 기반 성분 분석 결과입니다:\n{answer_from_db}\n\n"
                 f"{get_vegan_type_explanation(user_info)}"
             )
         elif question_type == "a":
-            gpt_prompt = f"다음 제품의 성분 정보:\n{answer_from_db}\n\n이 제품에 알레르기 유발 성분이 있는지 설명해 주세요. 주의해야 할 알러지 유발 물질이 있다면 명확히 알려주세요."
+            gpt_prompt = (
+                f"다음 제품의 성분 정보:\n{answer_from_db}\n\n"
+                f"이 제품에 알레르기 유발 성분이 있는지 설명해 주세요. "
+                f"주의해야 할 알러지 유발 물질이 있다면 명확히 알려주세요."
+            )
         elif question_type == "n":
-            gpt_prompt = f"다음 제품의 성분 정보:\n{answer_from_db}\n\n이 제품의 칼로리 및 주요 영양 정보를 요약해 주세요. 하루 권장 섭취량과 비교해도 좋아요."
+            gpt_prompt = (
+                f"다음 제품의 성분 정보:\n{answer_from_db}\n\n"
+                f"이 제품의 칼로리 및 주요 영양 정보를 요약해 주세요. "
+                f"하루 권장 섭취량과 비교해도 좋아요."
+            )
         else:
-            gpt_prompt = f"다음 성분 정보를 바탕으로 사용자 질문에 대해 설명을 덧붙여 주세요:\n{answer_from_db}"
+            gpt_prompt = (
+                f"다음 성분 정보를 바탕으로 사용자 질문에 대해 설명을 덧붙여 주세요:\n{answer_from_db}"
+            )
 
-        # ✅ GPT 부연 설명 생성
+        # ✅ GPT 모델에 프롬프트 전달 → 부연 설명 생성
         response = llm.invoke([{"role": "assistant", "content": gpt_prompt}])
         answer_from_gpt = response.content
 
-        # ✅ 최종 답변 출력
+        # ✅ 최종 응답 생성 및 출력
         combined_answer = (
             f"벡터 DB 및 OCR 기반 답변:\n{answer_from_db}\n\n"
             f"GPT 모델 기반 부연 설명:\n{answer_from_gpt}"
         )
+
         st.session_state.messages.append({"role": "assistant", "content": combined_answer})
         chat_message("assistant", combined_answer)
 
-        
         # ✅ 여기에 조건부 저장 코드 추가
         expected_gram = extract_gram_from_prompt(prompt)
 
@@ -724,11 +716,12 @@ def show():
             # GPT 기반 답변에서만 저장
             store_score_from_response(answer_from_gpt, expected_gram)
 
+        # ✅ 문서 관련 정보도 출력 (FAISS는 수동 필터링 필요)
+        retrieved_docs = retriever.get_relevant_documents(prompt)
+        filtered_docs = [doc for doc in retrieved_docs if doc.metadata.get("source") in document_name]
 
-        # 문서 관련 정보도 출력
-        docs = retriever.get_relevant_documents(prompt)
-        if docs:
+        if filtered_docs:
             with st.expander("참고 문서"):
-                for doc in docs:
+                for doc in filtered_docs:
                     source = doc.metadata.get("source", "출처 없음")
                     st.markdown(f"📄 **{source}**", help=doc.page_content)
