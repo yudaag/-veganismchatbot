@@ -407,28 +407,28 @@ def show():
                 st.error(f"OCR 처리 중 오류 발생: {e}")
                 st.stop()
     
-# ✅ OCR 성공 여부와 관계없이 항상 벡터스토어 초기화
-if "vectorstore" not in st.session_state:
-    zip_path = "/mount/src/-veganismchatbot/faiss_db_merged.zip"
-    persist_dir = "/mount/src/-veganismchatbot/faiss_db_merged"
-
-    if not os.path.exists(persist_dir):
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(persist_dir)
-            print(f"✅ 압축 해제 완료: {persist_dir}")
-
-    inner = os.listdir(persist_dir)
-    if len(inner) == 1 and os.path.isdir(os.path.join(persist_dir, inner[0])):
-        persist_dir = os.path.join(persist_dir, inner[0])
-        print(f"📂 이중 구조 감지 → 내부 경로로 이동: {persist_dir}")
-        
-    embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
-    st.session_state["vectorstore"] = FAISS.load_local(
-        persist_dir,
-        embedding_function,
-        allow_dangerous_deserialization=True
-    )
-    print("✅ 벡터 DB 로드 완료 (문서 추가 없음)")
+    # ✅ OCR 성공 여부와 관계없이 항상 벡터스토어 초기화
+    if "vectorstore" not in st.session_state:
+        zip_path = "/mount/src/-veganismchatbot/faiss_db_merged.zip"
+        persist_dir = "/mount/src/-veganismchatbot/faiss_db_merged"
+    
+        if not os.path.exists(persist_dir):
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(persist_dir)
+                print(f"✅ 압축 해제 완료: {persist_dir}")
+    
+        inner = os.listdir(persist_dir)
+        if len(inner) == 1 and os.path.isdir(os.path.join(persist_dir, inner[0])):
+            persist_dir = os.path.join(persist_dir, inner[0])
+            print(f"📂 이중 구조 감지 → 내부 경로로 이동: {persist_dir}")
+            
+        embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
+        st.session_state["vectorstore"] = FAISS.load_local(
+            persist_dir,
+            embedding_function,
+            allow_dangerous_deserialization=True
+        )
+        print("✅ 벡터 DB 로드 완료 (문서 추가 없음)")
 
     
 
