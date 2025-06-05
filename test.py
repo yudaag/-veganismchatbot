@@ -3,6 +3,10 @@ import os
 import zipfile
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
+import tempfile
+
+extract_path = os.path.join(tempfile.gettempdir(), "veganchroma_db")
+
 
 st.title("🧠 Chroma 벡터스토어 로드 확인")
 
