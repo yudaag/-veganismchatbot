@@ -388,68 +388,47 @@ def show():
     if uploaded_image is not None:
         if "prev_uploaded_filename" not in st.session_state or st.session_state["prev_uploaded_filename"] != uploaded_image.name:
             st.session_state["prev_uploaded_filename"] = uploaded_image.name
-
+    
             with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                 tmp_file.write(uploaded_image.getvalue())
                 tmp_path = tmp_file.name
-
+    
             try:
                 ocr_text = detect_text(tmp_path)
                 st.session_state["ocr_text"] = ocr_text
                 st.session_state["ocr_done"] = True
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
-
-                # ✅ 벡터스토어가 없으면 FAISS로 초기화
-                # ✅ 벡터스토어가 없으면 FAISS로 초기화
-                if "vectorstore" not in st.session_state:
-                    zip_path = "/mount/src/-veganismchatbot/faiss_db_merged.zip"
-                    persist_dir = "/mount/src/-veganismchatbot/faiss_db_merged"
-
-                    # 📁 압축 해제
-                    if not os.path.exists(persist_dir):
-                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                            zip_ref.extractall(persist_dir)
-                            print(f"✅ 압축 해제 완료: {persist_dir}")
-
-                    # 📂 내부에 다시 디렉토리가 있는 경우 처리
-                    inner = os.listdir(persist_dir)
-                    if len(inner) == 1 and os.path.isdir(os.path.join(persist_dir, inner[0])):
-                        persist_dir = os.path.join(persist_dir, inner[0])
-                        print(f"📂 이중 구조 감지 → 내부 경로로 이동: {persist_dir}")
-
-                    # 🔍 벡터스토어 로드
-                    embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
-                    st.session_state["vectorstore"] = FAISS.load_local(
-                        persist_dir,
-                        embedding_function,
-                        allow_dangerous_deserialization=True
-                    )
-                    print("✅ FAISS 로드 완료")
-                    
-                # ✅ OCR 텍스트를 벡터스토어에 추가
-                ocr_doc = Document(
-                    page_content=ocr_text,
-                    metadata={"source": "user_ocr", "filename": getattr(uploaded_image, "name", "user_uploaded_ocr")}
-                )
-                
-                try:
-                    # ✅ 벡터스토어에 OCR 문서 추가
-                    st.session_state["vectorstore"].add_documents([ocr_doc])
-                
-                    # ✅ OCR 텍스트와 문서를 세션에 직접 저장 (retriever 사용 X)
-                    st.session_state["ocr_doc"] = ocr_doc
-                    st.session_state["ocr_text"] = ocr_text
-                
-                    # ✅ 시스템 메시지로 OCR 내용 기록
-                    system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
-                    st.session_state["memory"].chat_memory.add_user_message(system_message)
-                
-                    st.success("✅ OCR 텍스트가 성공적으로 처리되어 저장되었습니다.")
-                
-                except Exception as e:
-                    st.error(f"OCR 처리 중 오류 발생: {e}")
-                    st.stop()
+    
+                system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
+                st.session_state["memory"].chat_memory.add_user_message(system_message)
+    
+            except Exception as e:
+                st.error(f"OCR 처리 중 오류 발생: {e}")
+                st.stop()
+    
+    # ✅ OCR 성공 여부와 관계없이 항상 벡터스토어 초기화
+    if "vectorstore" not in st.session_state:
+        zip_path = "/mount/src/-veganismchatbot/faiss_db_merged.zip"
+        persist_dir = "/mount/src/-veganismchatbot/faiss_db_merged"
+    
+        if not os.path.exists(persist_dir):
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(persist_dir)
+                print(f"✅ 압축 해제 완료: {persist_dir}")
+    
+        inner = os.listdir(persist_dir)
+        if len(inner) == 1 and os.path.isdir(os.path.join(persist_dir, inner[0])):
+            persist_dir = os.path.join(persist_dir, inner[0])
+            print(f"📂 이중 구조 감지 → 내부 경로로 이동: {persist_dir}")
+            
+        embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
+        st.session_state["vectorstore"] = FAISS.load_local(
+            persist_dir,
+            embedding_function,
+            allow_dangerous_deserialization=True
+        )
+        print("✅ 벡터 DB 로드 완료 (문서 추가 없음)")
                 
 
     # 초기 메시지 출력
