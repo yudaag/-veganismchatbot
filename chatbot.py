@@ -248,34 +248,34 @@ def show():
             similarity = difflib.SequenceMatcher(None, ocr_text, product_name).ratio()
             matching_docs.append((similarity, doc))
 
-        print(f"유사도 계산된 문서: {[(doc[1].metadata.get('product_name'), doc[0]) for doc in matching_docs]}")
-
+        # 유사도 높은 순으로 정렬
         matching_docs.sort(reverse=True, key=lambda x: x[0])
-        if not matching_docs:
+        
+        # 유사도가 0.7 이상인 경우에만 처리
+        if matching_docs:
+            most_similar_doc = matching_docs[0][1]  # 가장 유사한 문서 선택
+            print(f"가장 유사한 문서: {most_similar_doc.metadata.get('product_name')}")
+        else:
             print("유사한 문서를 찾을 수 없습니다.")
-            return None
-
-        most_similar_doc = matching_docs[0][1]
-        print(f"가장 유사한 문서: {most_similar_doc.metadata.get('product_name')}")
-
+        
         # 환경 영향 항목 추출
         selected_cols = extract_impact_columns(prompt)
         print(f"선택된 환경 영향 항목: {selected_cols}")
-
+        
         impact_data = []
-
+        
         if most_similar_doc:
             metadata = most_similar_doc.metadata
             impact_entry = {
                 'food_subgroup': metadata.get('food_subgroup'),
                 'product_name': metadata.get('product_name')
             }
-
+        
             for col in selected_cols:
                 impact_entry[col] = metadata.get(col, None)
-
+        
             impact_data.append(impact_entry)
-
+        
         print(f"환경 영향 데이터: {impact_data}")
 
         if impact_data:
