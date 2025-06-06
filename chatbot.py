@@ -241,22 +241,38 @@ def show():
 
         print(f"식품군 필터링된 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
 
-        # OCR 텍스트 기반 유사도 비교
-        matching_docs = []
-        for doc in relevant_docs:
-            product_name = doc.metadata.get("product_name", "")
-            similarity = difflib.SequenceMatcher(None, ocr_text, product_name).ratio()
-            matching_docs.append((similarity, doc))
-
-        # 유사도 높은 순으로 정렬
-        matching_docs.sort(reverse=True, key=lambda x: x[0])
+        def find_best_matching_doc_by_substring(ocr_text, docs):
+            ocr_text = ocr_text.lower()
+            best_score = 0
+            best_doc = None
         
-        # 유사도가 0.7 이상인 경우에만 처리
-        if matching_docs:
-            most_similar_doc = matching_docs[0][1]  # 가장 유사한 문서 선택
-            print(f"가장 유사한 문서: {most_similar_doc.metadata.get('product_name')}")
-        else:
-            print("유사한 문서를 찾을 수 없습니다.")
+            for doc in docs:
+                product_name = doc.metadata.get("product_name", "").lower()
+                if product_name in ocr_text:
+                    return doc  # 완전 포함되면 바로 반환
+        
+                # 부분 일치 유사도 계산
+                matcher = difflib.SequenceMatcher(None, ocr_text, product_name)
+                score = matcher.ratio()
+        
+                if score > best_score:
+                    best_score = score
+                    best_doc = doc
+        
+            print(f"🎯 가장 유사한 제품명 유사도: {best_score}")
+            return best_doc if best_score > 0.5 else None  # 임계값 설정
+
+
+        # OCR 텍스트 기반 유사도 비교
+        # ✅ OCR 텍스트 기반 유사도 비교 함수 호출
+        most_similar_doc = find_best_matching_doc_by_substring(ocr_text, relevant_docs)
+        
+        if not most_similar_doc:
+            print("❌ 유사한 제품명을 찾을 수 없습니다.")
+            return None
+        
+        print(f"✅ 가장 유사한 제품명: {most_similar_doc.metadata.get('product_name')}")
+
         
         # 환경 영향 항목 추출
         selected_cols = extract_impact_columns(prompt)
