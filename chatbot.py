@@ -718,4 +718,4 @@ def show():
             with st.expander("참고 문서"):
                 for doc in filtered_docs:
                     source = doc.metadata.get("source", "출처 없음")
-                    st.markdown(f"📄 **{source}**", help=doc.page_content) 이게 전체코드 
+                    st.markdown(f"📄 **{source}**", help=doc.page_content)
