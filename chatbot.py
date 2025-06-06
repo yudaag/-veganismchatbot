@@ -241,103 +241,26 @@ def show():
 
         print(f"식품군 필터링된 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
 
-                # ✅ difflib 기반 서브스트링 유사도 비교 함수 개선
         def find_best_matching_doc_by_substring(ocr_text, docs):
             ocr_text = ocr_text.lower()
-            lines = ocr_text.splitlines()
             best_score = 0
             best_doc = None
         
             for doc in docs:
                 product_name = doc.metadata.get("product_name", "").lower()
+                if product_name in ocr_text:
+                    return doc  # 완전 포함되면 바로 반환
         
-                # OCR 텍스트 내 어느 한 줄에라도 포함되면 우선 반환
-                if any(product_name in line for line in lines):
-                    print(f"🎯 OCR 내 포함된 제품명: {product_name}")
-                    return doc
-        
-                # 유사도 (양방향 비교) 계산
-                matcher1 = difflib.SequenceMatcher(None, ocr_text, product_name)
-                matcher2 = difflib.SequenceMatcher(None, product_name, ocr_text)
-                score = max(matcher1.ratio(), matcher2.ratio())
+                # 부분 일치 유사도 계산
+                matcher = difflib.SequenceMatcher(None, ocr_text, product_name)
+                score = matcher.ratio()
         
                 if score > best_score:
                     best_score = score
                     best_doc = doc
         
             print(f"🎯 가장 유사한 제품명 유사도: {best_score}")
-            if best_doc:
-                print(f"👉 유사도 높은 후보: {best_doc.metadata.get('product_name')}")
-            else:
-                print(f"🛑 후보 없음. OCR 내용:\n{ocr_text}")
-                print(f"📦 후보들: {[doc.metadata.get('product_name') for doc in docs]}")
-        
-            return best_doc if best_score > 0.5 else None
-        
-        
-        def calculate_environmental_impact(prompt, ocr_text):
-            vectorstore = st.session_state["vectorstore"]
-            document_name = analyze_question_type(prompt)
-            print(f"문서 이름: {document_name}")
-        
-            if not document_name:
-                no_match_response = (
-                    "❗죄송합니다. 해당 질문은 현재 지원하지 않습니다.\n"
-                    "다음과 같은 주제로 질문해 주세요:\n"
-                    "- 성분 분석, 식이범위 종류, 알레르기, 환경 영향, 수자원, 칼로리 등"
-                )
-                chat_message("assistant", no_match_response)
-                st.session_state["memory"].chat_memory.add_ai_message(no_match_response)
-                st.session_state.messages.append({"role": "assistant", "content": no_match_response})
-                return None
-        
-            retriever = vectorstore.as_retriever()
-            relevant_docs = retriever.get_relevant_documents(prompt)
-        
-            if isinstance(document_name, str):
-                relevant_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == document_name]
-            elif isinstance(document_name, list):
-                relevant_docs = [doc for doc in relevant_docs if doc.metadata.get("source") in document_name]
-        
-            print(f"관련 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
-        
-            subgroup = match_food_subgroup_from_prompt(prompt)
-            if subgroup:
-                relevant_docs = [doc for doc in relevant_docs if doc.metadata.get('food_subgroup') == subgroup]
-        
-            print(f"식품군 필터링된 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
-        
-            most_similar_doc = find_best_matching_doc_by_substring(ocr_text, relevant_docs)
-        
-            if not most_similar_doc:
-                print("❌ 유사한 제품명을 찾을 수 없습니다.")
-                return None
-        
-            print(f"✅ 가장 유사한 제품명: {most_similar_doc.metadata.get('product_name')}")
-        
-            selected_cols = extract_impact_columns(prompt)
-            print(f"선택된 환경 영향 항목: {selected_cols}")
-        
-            impact_data = []
-            metadata = most_similar_doc.metadata
-            impact_entry = {
-                'food_subgroup': metadata.get('food_subgroup'),
-                'product_name': metadata.get('product_name')
-            }
-        
-            for col in selected_cols:
-                impact_entry[col] = metadata.get(col, None)
-        
-            impact_data.append(impact_entry)
-            print(f"환경 영향 데이터: {impact_data}")
-        
-            if impact_data:
-                impact_df = pd.DataFrame(impact_data)
-                print(f"결과 DataFrame: {impact_df}")
-                return impact_df
-            else:
-                print("환경 영향 데이터가 없습니다.")
-                return None
+            return best_doc if best_score > 0.5 else None  # 임계값 설정
 
 
         # OCR 텍스트 기반 유사도 비교
@@ -795,4 +718,4 @@ def show():
             with st.expander("참고 문서"):
                 for doc in filtered_docs:
                     source = doc.metadata.get("source", "출처 없음")
-                    st.markdown(f"📄 **{source}**", help=doc.page_content)
+                    st.markdown(f"📄 **{source}**", help=doc.page_content) 이게 전체코드 
