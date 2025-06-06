@@ -243,24 +243,36 @@ def show():
 
         def find_best_matching_doc_by_substring(ocr_text, docs):
             ocr_text = ocr_text.lower()
+            lines = ocr_text.splitlines()
             best_score = 0
             best_doc = None
         
             for doc in docs:
                 product_name = doc.metadata.get("product_name", "").lower()
-                if product_name in ocr_text:
-                    return doc  # 완전 포함되면 바로 반환
         
-                # 부분 일치 유사도 계산
-                matcher = difflib.SequenceMatcher(None, ocr_text, product_name)
-                score = matcher.ratio()
+                # OCR 텍스트 내 어느 한 줄에라도 포함되면 우선 반환
+                if any(product_name in line for line in lines):
+                    print(f"🎯 OCR 내 포함된 제품명: {product_name}")
+                    return doc
+        
+                # 유사도 (양방향 비교) 계산
+                matcher1 = difflib.SequenceMatcher(None, ocr_text, product_name)
+                matcher2 = difflib.SequenceMatcher(None, product_name, ocr_text)
+                score = max(matcher1.ratio(), matcher2.ratio())
         
                 if score > best_score:
                     best_score = score
                     best_doc = doc
         
             print(f"🎯 가장 유사한 제품명 유사도: {best_score}")
-            return best_doc if best_score > 0.5 else None  # 임계값 설정
+            if best_doc:
+                print(f"👉 유사도 높은 후보: {best_doc.metadata.get('product_name')}")
+            else:
+                print(f"🛑 후보 없음. OCR 내용:\n{ocr_text}")
+                print(f"📦 후보들: {[doc.metadata.get('product_name') for doc in docs]}")
+        
+            return best_doc if best_score > 0.5 else None  # 임계값 조정 가능
+
 
 
         # OCR 텍스트 기반 유사도 비교
