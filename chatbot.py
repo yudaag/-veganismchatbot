@@ -112,7 +112,7 @@ def show():
     def analyze_question_type(prompt):
         if "성분" in prompt or "분석" in prompt:
             return "식품표시기준.pdf"
-        elif "식이 범위" in prompt or "식이범위" in prompt :
+        elif "식이 범위" in prompt or "식이범위" in prompt or "비건" in prompt:
             return "식이범위.pdf"
         elif "알러지" in prompt or "알레르기" in prompt:
             return "알러지.pdf"
@@ -215,7 +215,7 @@ def show():
             no_match_response = (
                 "❗죄송합니다. 해당 질문은 현재 지원하지 않습니다.\n"
                 "다음과 같은 주제로 질문해 주세요:\n"
-                "- 성분 분석, 식이범위 종류, 알레르기, 환경 영향, 수자원, 칼로리 등"
+                "- 성분 분석, 비건 종류, 알레르기, 환경 영향, 수자원, 칼로리 등"
             )
             chat_message("assistant", no_match_response)
             st.session_state["memory"].chat_memory.add_ai_message(no_match_response)
@@ -241,57 +241,41 @@ def show():
 
         print(f"식품군 필터링된 문서: {[doc.metadata.get('product_name') for doc in relevant_docs]}")
 
-        def find_best_matching_doc_by_substring(ocr_text, docs):
-            ocr_text = ocr_text.lower()
-            best_score = 0
-            best_doc = None
-        
-            for doc in docs:
-                product_name = doc.metadata.get("product_name", "").lower()
-                if product_name in ocr_text:
-                    return doc  # 완전 포함되면 바로 반환
-        
-                # 부분 일치 유사도 계산
-                matcher = difflib.SequenceMatcher(None, ocr_text, product_name)
-                score = matcher.ratio()
-        
-                if score > best_score:
-                    best_score = score
-                    best_doc = doc
-        
-            print(f"🎯 가장 유사한 제품명 유사도: {best_score}")
-            return best_doc if best_score > 0.5 else None  # 임계값 설정
-
-
         # OCR 텍스트 기반 유사도 비교
-        # ✅ OCR 텍스트 기반 유사도 비교 함수 호출
-        most_similar_doc = find_best_matching_doc_by_substring(ocr_text, relevant_docs)
-        
-        if not most_similar_doc:
-            print("❌ 유사한 제품명을 찾을 수 없습니다.")
-            return None
-        
-        print(f"✅ 가장 유사한 제품명: {most_similar_doc.metadata.get('product_name')}")
+        matching_docs = []
+        for doc in relevant_docs:
+            product_name = doc.metadata.get("product_name", "")
+            similarity = difflib.SequenceMatcher(None, ocr_text, product_name).ratio()
+            matching_docs.append((similarity, doc))
 
-        
+        print(f"유사도 계산된 문서: {[(doc[1].metadata.get('product_name'), doc[0]) for doc in matching_docs]}")
+
+        matching_docs.sort(reverse=True, key=lambda x: x[0])
+        if not matching_docs:
+            print("유사한 문서를 찾을 수 없습니다.")
+            return None
+
+        most_similar_doc = matching_docs[0][1]
+        print(f"가장 유사한 문서: {most_similar_doc.metadata.get('product_name')}")
+
         # 환경 영향 항목 추출
         selected_cols = extract_impact_columns(prompt)
         print(f"선택된 환경 영향 항목: {selected_cols}")
-        
+
         impact_data = []
-        
+
         if most_similar_doc:
             metadata = most_similar_doc.metadata
             impact_entry = {
                 'food_subgroup': metadata.get('food_subgroup'),
                 'product_name': metadata.get('product_name')
             }
-        
+
             for col in selected_cols:
                 impact_entry[col] = metadata.get(col, None)
-        
+
             impact_data.append(impact_entry)
-        
+
         print(f"환경 영향 데이터: {impact_data}")
 
         if impact_data:
@@ -399,54 +383,81 @@ def show():
         st.session_state["ocr_text"] = None
     if "calorie_answers" not in st.session_state:
         st.session_state["calorie_answers"] = []
-    
+
     # 이미지 업로드 및 OCR 처리
     if uploaded_image is not None:
         if "prev_uploaded_filename" not in st.session_state or st.session_state["prev_uploaded_filename"] != uploaded_image.name:
             st.session_state["prev_uploaded_filename"] = uploaded_image.name
-    
+
             with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                 tmp_file.write(uploaded_image.getvalue())
                 tmp_path = tmp_file.name
-    
+
             try:
                 ocr_text = detect_text(tmp_path)
                 st.session_state["ocr_text"] = ocr_text
                 st.session_state["ocr_done"] = True
                 st.success("✅ OCR 처리 완료! 추출된 텍스트:")
                 st.text_area("OCR 텍스트", ocr_text, height=300)
-    
+
+                # ✅ 벡터스토어가 없으면 FAISS로 초기화
+                # ✅ 벡터스토어가 없으면 FAISS로 초기화
+                if "vectorstore" not in st.session_state:
+                    zip_path = "/mount/src/-veganismchatbot/faiss_db_merged.zip"
+                    persist_dir = "/mount/src/-veganismchatbot/faiss_db_merged"
+
+                    # 📁 압축 해제
+                    if not os.path.exists(persist_dir):
+                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                            zip_ref.extractall(persist_dir)
+                            print(f"✅ 압축 해제 완료: {persist_dir}")
+
+                    # 📂 내부에 다시 디렉토리가 있는 경우 처리
+                    inner = os.listdir(persist_dir)
+                    if len(inner) == 1 and os.path.isdir(os.path.join(persist_dir, inner[0])):
+                        persist_dir = os.path.join(persist_dir, inner[0])
+                        print(f"📂 이중 구조 감지 → 내부 경로로 이동: {persist_dir}")
+
+                    # 🔍 벡터스토어 로드
+                    embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
+                    st.session_state["vectorstore"] = FAISS.load_local(
+                        persist_dir,
+                        embedding_function,
+                        allow_dangerous_deserialization=True
+                    )
+                    print("✅ FAISS 로드 완료")
+                    
+                # ✅ OCR 텍스트를 벡터스토어에 추가
+                ocr_doc = Document(
+                    page_content=ocr_text,
+                    metadata={"source": "user_ocr", "filename": uploaded_image.name}
+                )
+                st.session_state["vectorstore"].add_documents([ocr_doc])
+
+                # ✅ OCR 관련 시스템 메시지 기록
                 system_message = f"아래는 식품 라벨 OCR 텍스트입니다:\n{ocr_text}"
                 st.session_state["memory"].chat_memory.add_user_message(system_message)
-    
+
+                # ✅ 가장 최신의 user_ocr 문서만 나중에 사용하도록 따로 보관
+                retrieved_docs = st.session_state["vectorstore"].as_retriever().get_relevant_documents("user_ocr")
+
+                user_ocr_docs = [doc for doc in retrieved_docs if doc.metadata.get("source") == "user_ocr"]
+
+                if user_ocr_docs:
+                    latest_ocr_doc = sorted(
+                        user_ocr_docs,
+                        key=lambda d: d.metadata.get("filename", ""),
+                        reverse=True
+                    )[0]
+
+                    # OCR 텍스트 덮어쓰기 (중복 저장 방지용)
+                    st.session_state["ocr_text"] = latest_ocr_doc.page_content
+                else:
+                    st.error("❗ user_ocr 문서를 찾을 수 없습니다.")
+                    st.stop()
             except Exception as e:
                 st.error(f"OCR 처리 중 오류 발생: {e}")
                 st.stop()
-    
-    # ✅ OCR 성공 여부와 관계없이 항상 벡터스토어 초기화
-    if "vectorstore" not in st.session_state:
-        zip_path = "/mount/src/-veganismchatbot/faiss_db_merged.zip"
-        persist_dir = "/mount/src/-veganismchatbot/faiss_db_merged"
-    
-        if not os.path.exists(persist_dir):
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(persist_dir)
-                print(f"✅ 압축 해제 완료: {persist_dir}")
-    
-        inner = os.listdir(persist_dir)
-        if len(inner) == 1 and os.path.isdir(os.path.join(persist_dir, inner[0])):
-            persist_dir = os.path.join(persist_dir, inner[0])
-            print(f"📂 이중 구조 감지 → 내부 경로로 이동: {persist_dir}")
-            
-        embedding_function = OpenAIEmbeddings(model="text-embedding-3-large")
-        st.session_state["vectorstore"] = FAISS.load_local(
-            persist_dir,
-            embedding_function,
-            allow_dangerous_deserialization=True
-        )
-        print("✅ 벡터 DB 로드 완료 (문서 추가 없음)")
-
-    
 
     # 초기 메시지 출력
     if "messages" not in st.session_state:
@@ -493,6 +504,38 @@ def show():
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.stop()
 
+# 수정 줄 시작        
+        keywords = ["수자원", "성분", "비건", "알러지", "환경 영향", "수자원", "칼로리", "식이범위", "감자칩", "환경 점수", "환경 영향 점수"]
+# 수정 줄  끝
+
+
+        # '점수' 키워드가 포함된 질문이면 점수 계산만 출력
+        if "점수" in prompt or "환경 점수" in prompt or "환경 영향 점수" in prompt:
+            result = calculate_environmental_impact_with_score(prompt)
+            
+            if result:  # 점수 계산 결과가 존재하면
+                chat_message("assistant", result)  # 계산된 점수 출력
+                st.session_state["memory"].chat_memory.add_ai_message(result)  # 계산된 결과 메모리에 추가
+                st.session_state.messages.append({"role": "assistant", "content": result})  # 세션 메시지에 추가
+            else:
+                # 계산 값이 없을 경우
+                error_message = "❗ 점수를 계산하기 위한 값이 부족합니다. 다시 시도해주세요."
+                chat_message("assistant", error_message)  # 오류 메시지 출력
+                st.session_state["memory"].chat_memory.add_ai_message(error_message)  # 오류 메시지 메모리에 추가
+                st.session_state.messages.append({"role": "assistant", "content": error_message})  # 오류 메시지 세션에 추가
+            return
+
+        # 다른 키워드가 포함된 질문은 비건 관련 메시지 출력
+        if not any(keyword in prompt for keyword in keywords):
+            no_relevant_msg = (
+                "죄송합니다. 해당 질문은 비거니즘에 관련된 질문이 아닙니다.😅😅 "
+                "비건니즘에 관련된 질문이 있다면 언제든지 질문해주세요!"
+            )
+            chat_message("assistant", no_relevant_msg)  # 답변 출력
+            st.session_state["memory"].chat_memory.add_ai_message(no_relevant_msg)  # 메모리에 저장
+            st.session_state.messages.append({"role": "assistant", "content": no_relevant_msg})  # 세션 메시지에 추가
+            return
+        
         # ✅ 환경 영향 질문이 포함된 경우에만 환경 영향 계산 함수 실행
         if "환경 영향" in prompt or "환경영향" in prompt:  # 사용자가 입력한 prompt에서 '환경 영향' 또는 '환경영향'이 포함되어 있으면
             # 환경 영향 계산 함수 호출
@@ -523,37 +566,6 @@ def show():
             # 필요 시: 이 응답은 저장 안 해도 됨 (총합 결과이므로)
             return
 
-        # '점수' 키워드가 포함된 질문이면 점수 계산만 출력
-        if "점수" in prompt or "환경 점수" in prompt or "환경 영향 점수" in prompt:
-            result = calculate_environmental_impact_with_score(prompt)
-            
-            if result:  # 점수 계산 결과가 존재하면
-                chat_message("assistant", result)  # 계산된 점수 출력
-                st.session_state["memory"].chat_memory.add_ai_message(result)  # 계산된 결과 메모리에 추가
-                st.session_state.messages.append({"role": "assistant", "content": result})  # 세션 메시지에 추가
-            else:
-                # 계산 값이 없을 경우
-                error_message = "❗ 점수를 계산하기 위한 값이 부족합니다. 다시 시도해주세요."
-                chat_message("assistant", error_message)  # 오류 메시지 출력
-                st.session_state["memory"].chat_memory.add_ai_message(error_message)  # 오류 메시지 메모리에 추가
-                st.session_state.messages.append({"role": "assistant", "content": error_message})  # 오류 메시지 세션에 추가
-            return
-            
-# 수정 줄 시작        
-        keywords = ["성분", "분석", "성분 분석", "식이 범위", "식이범위", "알러지", "알레르기", "환경영향", "수자원", "점수", "환경 영향 점수", "칼로리"]
-# 수정 줄  끝
-
-        # 다른 키워드가 포함된 질문은 비건 관련 메시지 출력
-        if not any(keyword in prompt for keyword in keywords):
-            no_relevant_msg = (
-                "죄송합니다. 해당 질문은 비거니즘에 관련된 질문이 아닙니다.😅😅 "
-                "비건니즘에 관련된 질문이 있다면 언제든지 질문해주세요!"
-            )
-            chat_message("assistant", no_relevant_msg)  # 답변 출력
-            st.session_state["memory"].chat_memory.add_ai_message(no_relevant_msg)  # 메모리에 저장
-            st.session_state.messages.append({"role": "assistant", "content": no_relevant_msg})  # 세션 메시지에 추가
-            return
-
 
         if "vectorstore" not in st.session_state or st.session_state["ocr_text"] is None:
             chat_message("assistant", "❗ 먼저 이미지 업로드 및 OCR 처리를 완료해 주세요.")
@@ -576,7 +588,8 @@ def show():
         # ✅ RAG 프롬프트 정의 (1번만)
         rag_prompt = ChatPromptTemplate.from_template("""
         당신은 비거니즘 관련 질문에 답하는 챗봇입니다.
-        
+        - 사용자의 비건 종류와 알러지를 고려해 최대한 정확히 답해주세요.
+
         사용자 질문: {question}
 
         OCR 텍스트: {ocr_text}
@@ -658,7 +671,7 @@ def show():
         # ✅ GPT로 질문 주제 분류
         def classify_question_with_gpt(question: str) -> str:
             classification_prompt = f"""
-        다음 질문의 주제를 분류하세요. 항목: 식이범위(v), 알러지(a), 칼로리(n), 환경 영향(e)
+        다음 질문의 주제를 분류하세요. 항목: 비건(v), 알러지(a), 칼로리(n), 환경 영향(e)
         질문: "{question}"
         정답은 v, a, n, e 중 하나로만 대답하세요.
         """
@@ -718,4 +731,4 @@ def show():
             with st.expander("참고 문서"):
                 for doc in filtered_docs:
                     source = doc.metadata.get("source", "출처 없음")
-                    st.markdown(f"📄 **{source}**", help=doc.page_content)
+                    st.markdown(f"📄 **{source}**", help=doc.page_content) 
