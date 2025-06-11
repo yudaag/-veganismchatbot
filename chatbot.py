@@ -286,9 +286,10 @@ def show():
             print("환경 영향 데이터가 없습니다.")
             return None
         
+
     def extract_values_from_prompt(prompt):
         print(f"입력된 prompt: {prompt}")
-        items_values = re.findall(r"([^\-]+) - ([0-9.E-]+)", prompt)
+        items_values = re.findall(r"([^\-]+) - ([0-9.+E\-]+)", prompt)
         print(f"추출된 항목과 값: {items_values}")
         return items_values
 
