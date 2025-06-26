@@ -45,20 +45,20 @@ def show():
             }}
 
             .title {{
-                font-size: 70px;
+                font-size: 50px;
                 font-weight: bold;
                 color: #1b5e20;
                 margin-bottom: 1rem;
             }}
 
             .subtitle {{
-                font-size: 30px;
+                font-size: 20px;
                 color: #1b5e20;
                 margin-bottom: 1.5rem;
             }}
 
             .text {{
-                font-size: 20px;
+                font-size: 15px;
                 color: #333;
                 margin-bottom: 1rem;
             }}
