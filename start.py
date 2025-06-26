@@ -46,7 +46,7 @@ def show():
 
 
             .title {{
-                font-size: 40px;
+                font-size: 50px;
                 font-weight: bold;
                 color: #1b5e20;
                 margin-bottom: 1rem;
