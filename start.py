@@ -72,7 +72,7 @@ def show():
     st.markdown(f"""
         <div class="background">
             <div class="left-blur">
-                <div class="title"🌏ECOVEGANISM🌏</div>
+                <div class="title"for ECOVEGANISM</div>
                 <div class="subtitle"><strong>이 제품, 먹어도 될까?</strong></div>
                 <div class="text">
                     이오는 제품의 식품 라벨을 바탕으로<br>
