@@ -516,7 +516,7 @@ def show():
             
             if impact_df is not None:  # 환경 영향 데이터가 정상적으로 반환되었으면
                 # impact_df를 HTML 테이블로 변환하여 출력 형식 지정
-                impact_response = f"<h5>환경 영향 데이터:</h5>{impact_df.to_html(index=False)}"
+                impact_response = f"<h4>환경 영향 데이터:</h4>{impact_df.to_html(index=False)}"
                 chat_message("assistant", impact_response)  # assistant 역할로 생성된 환경 영향 데이터를 사용자에게 메시지로 출력
                 st.session_state["memory"].chat_memory.add_ai_message(impact_response)  # 메시지를 채팅 기록에 추가
                 st.session_state.messages.append({"role": "assistant", "content": impact_response})  # 메시지를 'assistant' 역할로 세션 메시지에 추가
