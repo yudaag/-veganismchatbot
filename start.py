@@ -29,7 +29,7 @@ def show():
                 background-color: rgba(255, 255, 255, 0.4);
                 display: flex;
                 flex-direction: column;
-                padding: 5rem 3rem;
+                padding: 2rem 3rem 5rem 3rem;
                 justify-content: flex-start;
             }}
 
