@@ -37,7 +37,7 @@ def show():
                 width: 100%;
                 height: 100%;
                 backdrop-filter: blur(10px);
-                background-color: rgba(255, 255, 255, 0.3);
+                background-color: rgba(255, 255, 255, 0.1);
                 display: flex;
                 flex-direction: column;
                 padding: 5rem 3rem;
@@ -53,13 +53,13 @@ def show():
             }}
 
             .subtitle {{
-                font-size: 15px;
+                font-size: 20px;
                 color: #1b5e20;
                 margin-bottom: 1.5rem;
             }}
 
             .text {{
-                font-size: 10px;
+                font-size: 15px;
                 color: #333;
                 margin-bottom: 1rem;
             }}
