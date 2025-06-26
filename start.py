@@ -34,7 +34,7 @@ def show():
             }}
 
             .title {{
-                font-size: 40px;
+                font-size: 38px;
                 font-weight: bold;
                 color: #1b5e20;
                 margin-bottom: 1rem;
