@@ -36,7 +36,7 @@ def show():
             .left-blur {{
                 width: 100%;
                 height: 100%;
-                backdrop-filter: blur(30px);
+                backdrop-filter: blur(10px);
                 background-color: rgba(255, 255, 255, 0.6);
                 display: flex;
                 flex-direction: column;
@@ -45,20 +45,20 @@ def show():
             }}
 
             .title {{
-                font-size: 50px;
+                font-size: 30px;
                 font-weight: bold;
                 color: #1b5e20;
                 margin-bottom: 1rem;
             }}
 
             .subtitle {{
-                font-size: 20px;
+                font-size: 10px;
                 color: #1b5e20;
                 margin-bottom: 1.5rem;
             }}
 
             .text {{
-                font-size: 15px;
+                font-size: 8px;
                 color: #333;
                 margin-bottom: 1rem;
             }}
