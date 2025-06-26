@@ -1,16 +1,9 @@
 import streamlit as st
-from PIL import Image
-import base64
 
 st.set_page_config(page_title="", layout="wide", page_icon="🥦")
 
 def show():
-    def get_base64_image(image_path):
-        with open(image_path, "rb") as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
-
-    # CSS
+    # CSS (이미지 배경 제거, 깔끔한 기본 배경 유지)
     st.markdown(f"""
         <style>
             html, body, .main {{
@@ -24,9 +17,7 @@ def show():
                 position: relative;
                 width: 100%;
                 height: 70vh;
-                background-image: url("data:image/jpeg;base64,{base64_image}");
-                background-size: cover;
-                background-position: center;
+                background-color: #f0f9f4;
                 display: flex;
                 align-items: center;
             }}
@@ -35,13 +26,12 @@ def show():
                 width: 100%;
                 height: 100%;
                 backdrop-filter: blur(10px);
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.4);
                 display: flex;
                 flex-direction: column;
                 padding: 5rem 3rem;
                 justify-content: flex-start;
             }}
-
 
             .title {{
                 font-size: 40px;
@@ -78,12 +68,11 @@ def show():
         </style>
     """, unsafe_allow_html=True)
 
-    # 배경 + 텍스트 콘텐츠
+    # 텍스트 콘텐츠
     st.markdown(f"""
         <div class="background">
             <div class="left-blur">
-                <div class="title"> ECOVEGANISM
-                </div>
+                <div class="title">ECOVEGANISM</div>
                 <div class="subtitle"><strong>이 제품, 먹어도 될까?</strong></div>
                 <div class="text">
                     이오는 제품의 식품 라벨을 바탕으로<br>
@@ -94,7 +83,7 @@ def show():
                 </div>
     """, unsafe_allow_html=True)
 
-    # 🔽 버튼 위치 조정용 컬럼: 텍스트 바로 밑에 위치해야 함
+    # 버튼
     col1, col2, col3 = st.columns([1, 2, 7])
     with col2:
         st.markdown("""
@@ -130,4 +119,3 @@ def show():
             © 2025 Eco Veganism Chatbot | io
         </div>
     """, unsafe_allow_html=True)
-
