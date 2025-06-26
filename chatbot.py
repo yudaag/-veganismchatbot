@@ -513,10 +513,10 @@ def show():
         if "환경 영향" in prompt or "환경영향" in prompt:  # 사용자가 입력한 prompt에서 '환경 영향' 또는 '환경영향'이 포함되어 있으면
             # 환경 영향 계산 함수 호출
             impact_df = calculate_environmental_impact(prompt, st.session_state["ocr_text"])  # 'calculate_environmental_impact' 함수 호출, 사용자의 질문과 OCR 텍스트를 전달하여 환경 영향 데이터 계산
-            
+
             if impact_df is not None:  # 환경 영향 데이터가 정상적으로 반환되었으면
                 # impact_df를 HTML 테이블로 변환하여 출력 형식 지정
-                impact_response = f"<h3>환경 영향 데이터:</h3>{impact_df.to_html(index=False)}"
+                impact_response = f"<h5>환경 영향 데이터:</h5>{impact_df.to_html(index=False, border=0)}"
                 chat_message("assistant", impact_response)  # assistant 역할로 생성된 환경 영향 데이터를 사용자에게 메시지로 출력
                 st.session_state["memory"].chat_memory.add_ai_message(impact_response)  # 메시지를 채팅 기록에 추가
                 st.session_state.messages.append({"role": "assistant", "content": impact_response})  # 메시지를 'assistant' 역할로 세션 메시지에 추가
