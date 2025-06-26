@@ -37,7 +37,7 @@ def show():
                 font-size: 35px;
                 font-weight: bold;
                 color: #1b5e20;
-                margin-bottom: 1rem;
+                margin-bottom: 0rem;
             }}
 
             .subtitle {{
