@@ -35,7 +35,7 @@ def show():
 
             .left-blur {{
                 width: 100%;
-                height: 50%;
+                height: 0%;
                 backdrop-filter: blur(10px);
                 background-color: rgba(255, 255, 255, 0.6);
                 display: flex;
@@ -83,8 +83,7 @@ def show():
     st.markdown(f"""
         <div class="background">
             <div class="left-blur">
-                <div class="title">이 모든 걸 <br>
-                오 분 안에 알려드려요! <br>
+                <div class="title"> ecoveganism
                 </div>
                 <div class="subtitle"><strong>이 제품, 먹어도 될까?</strong></div>
                 <div class="text">
