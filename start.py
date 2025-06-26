@@ -33,17 +33,6 @@ def show():
                 align-items: center;
             }}
 
-            .left-blur {{
-                width: 100%;
-                height: 0%;
-                backdrop-filter: blur(10px);
-                background-color: rgba(255, 255, 255, 0.6);
-                display: flex;
-                flex-direction: column;
-                padding: 5rem 3rem;
-                justify-content: flex-start;
-            }}
-
             .title {{
                 font-size: 40px;
                 font-weight: bold;
