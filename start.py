@@ -10,8 +10,6 @@ def show():
             data = f.read()
         return base64.b64encode(data).decode()
 
-    base64_image = get_base64_image("시작.jpeg")
-
     # CSS
     st.markdown(f"""
         <style>
@@ -84,7 +82,7 @@ def show():
     st.markdown(f"""
         <div class="background">
             <div class="left-blur">
-                <div class="title"> ecoveganism
+                <div class="title"> ECOVEGANISM
                 </div>
                 <div class="subtitle"><strong>이 제품, 먹어도 될까?</strong></div>
                 <div class="text">
